@@ -9,22 +9,15 @@ from database import init_db, register_user, get_categories, add_custom_category
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# ساخت کیبورد پایین چت (به جای دکمه‌های شیشه‌ای زیر پیام)
 def get_tracker_keyboard(user_id):
     categories = get_categories(user_id)
     keyboard = []
-    
-    # چیدن دکمه‌های تسک به صورت دو تایی
     for i in range(0, len(categories), 2):
         row = [KeyboardButton(categories[i])]
         if i + 1 < len(categories):
             row.append(KeyboardButton(categories[i+1]))
         keyboard.append(row)
-    
-    # اضافه کردن دکمه افزودن تسک جدید در انتها
     keyboard.append([KeyboardButton("➕ افزودن دسته‌بندی جدید")])
-    
-    # resize_keyboard=True باعث می‌شود دکمه‌ها کوچک و استاندارد شوند
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -34,8 +27,15 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     register_user(user_id, chat_id, user_name)
     
-    await update.message.reply_text(
-        f"🎯 کاربر {user_name} ثبت شد. کیبورد اختصاصی شما در پایین چت فعال گردید.",
+    # حذف دستور /register یا /start برای خلوت شدن گروه
+    try:
+        await update.message.delete()
+    except Exception:
+        pass
+
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=f"🎯 کاربر {user_name} ثبت شد. کیبورد اختصاصی شما فعال گردید.",
         reply_markup=get_tracker_keyboard(user_id)
     )
 
@@ -47,6 +47,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # ۱. بررسی وضعیت افزودن دسته‌بندی جدید
     if context.user_data.get(f'waiting_{user_id}'):
+        # حذف پیام حاوی نام تسک جدید
+        try: await update.message.delete()
+        except Exception: pass
+        
         add_custom_category(user_id, text)
         context.user_data[f'waiting_{user_id}'] = False
         await update.message.reply_text(
@@ -55,20 +59,28 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ۲. اگر دکمه "افزودن دسته‌بندی جدید" فشرده شد
+    # ۲. دکمه افزودن دسته‌بندی جدید
     if text == "➕ افزودن دسته‌بندی جدید":
-        context.user_data[f'waiting_{user_id}'] = True
+        try: await update.message.delete()
+        except Exception: pass
         await update.message.reply_text(f"👤 {user_name}، نام دسته‌بندی جدید را تایپ و ارسال کنید:")
+        context.user_data[f'waiting_{user_id}'] = True
         return
 
-    # ۳. پردازش دکمه‌های تسک‌ها
-    categories = get_categories(user_id)
-    if text in categories:
+    # ۳. پردازش تسک‌ها بر اساس دسته‌بندی اختصاصی هر کاربر
+    user_categories = get_categories(user_id)
+    if text in user_categories:
+        # حذف پیام متنی دکمه که کاربر فرستاده
+        try:
+            await update.message.delete()
+        except Exception:
+            pass
+            
         prev_info = start_new_activity(user_id, chat_id, text)
         msg = f"👤 {user_name} --> {text}"
         if prev_info:
-            msg += f"\n\n⏱  ({prev_info['category']}) به مدت {prev_info['duration'] // 60} ساعت و {prev_info['duration'] % 60} دقیقه طول کشید."
-        await update.message.reply_text(msg)
+            msg += f"\n\n⏱ ({prev_info['category']}) به مدت {prev_info['duration'] // 60} ساعت و {prev_info['duration'] % 60} دقیقه طول کشید."
+        await context.bot.send_message(chat_id=chat_id, text=msg)
 
 async def send_daily_reports(context: ContextTypes.DEFAULT_TYPE):
     import sqlite3
