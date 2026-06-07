@@ -54,17 +54,16 @@ def register_group(user_id, group_chat_id):
     conn.commit()
     conn.close()
 
+def clean_emoji(text):
+    # حذف ایموجی‌های پیش‌فرض برای یکسان‌سازی ذخیره در دیتابیس
+    emojis = ["📚 ", "🍔 ", "🍿 ", "🛒 ", "🎬 ", "🚗 ", "🏋️ ", "😴 "]
+    for e in emojis:
+        text = text.replace(e, "")
+    return text.strip()
+
 def get_categories(user_id):
-    default_cats = [
-        "📚 Study", 
-        "🍔 Meal", 
-        "🍿 Snack", 
-        "🛒 Grocery", 
-        "🎬 Movie/Series", 
-        "🚗 Commute", 
-        "🏋️ Exercises", 
-        "😴 Sleep"
-    ]
+    # لیست پیش‌فرض متنی خام
+    default_cats = ["Study", "Meal", "Snack", "Grocery", "Movie/Series", "Commute", "Exercises", "Sleep"]
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT category FROM categories WHERE user_id = ?", (user_id,))
@@ -73,17 +72,19 @@ def get_categories(user_id):
     return [r[0] for r in rows] if rows else default_cats
 
 def add_custom_category(user_id, category):
+    category = clean_emoji(category)
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT category FROM categories WHERE user_id = ?", (user_id,))
     if not cursor.fetchall():
         for cat in get_categories(user_id):
             cursor.execute("INSERT OR IGNORE INTO categories VALUES (?, ?)", (user_id, cat))
-    cursor.execute("INSERT OR IGNORE INTO categories VALUES (?, ?)", (user_id, category.strip()))
+    cursor.execute("INSERT OR IGNORE INTO categories VALUES (?, ?)", (user_id, category))
     conn.commit()
     conn.close()
 
 def delete_category(user_id, category):
+    category = clean_emoji(category)
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT category FROM categories WHERE user_id = ?", (user_id,))
@@ -91,11 +92,13 @@ def delete_category(user_id, category):
         for cat in get_categories(user_id):
             cursor.execute("INSERT OR IGNORE INTO categories VALUES (?, ?)", (user_id, cat))
     
-    cursor.execute("DELETE FROM categories WHERE user_id = ? AND category = ?", (user_id, category.strip()))
+    cursor.execute("DELETE FROM categories WHERE user_id = ? AND category = ?", (user_id, category))
     conn.commit()
     conn.close()
 
 def rename_category(user_id, old_name, new_name):
+    old_name = clean_emoji(old_name)
+    new_name = clean_emoji(new_name)
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT category FROM categories WHERE user_id = ?", (user_id,))
@@ -103,11 +106,12 @@ def rename_category(user_id, old_name, new_name):
         for cat in get_categories(user_id):
             cursor.execute("INSERT OR IGNORE INTO categories VALUES (?, ?)", (user_id, cat))
             
-    cursor.execute("UPDATE categories SET category = ? WHERE user_id = ? AND category = ?", (new_name.strip(), user_id, old_name.strip()))
+    cursor.execute("UPDATE categories SET category = ? WHERE user_id = ? AND category = ?", (new_name, user_id, old_name))
     conn.commit()
     conn.close()
 
 def start_new_activity(user_id, chat_id, category):
+    category = clean_emoji(category)
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     now = datetime.now()
@@ -125,7 +129,7 @@ def start_new_activity(user_id, chat_id, category):
         cursor.execute("SELECT category FROM activities WHERE id = ?", (act_id,))
         prev_info = {"category": cursor.fetchone()[0], "duration": duration}
     
-    cursor.execute('INSERT INTO activities (user_id, chat_id, category, start_time) VALUES (?, ?, ?, ?)', (user_id, chat_id, category.strip(), now_str))
+    cursor.execute('INSERT INTO activities (user_id, chat_id, category, start_time) VALUES (?, ?, ?, ?)', (user_id, chat_id, category, now_str))
     conn.commit()
     conn.close()
     return prev_info
@@ -162,11 +166,8 @@ def get_current_session(user_id):
 def get_day_report_so_far(user_id):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    
-    # شروع از ابتدای امروز روز جاری
     today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
     
-    # محاسبات مربوط به کارهای بسته‌ شده‌ی امروز
     cursor.execute('''
         SELECT category, SUM(duration_minutes) 
         FROM activities 
@@ -177,7 +178,6 @@ def get_day_report_so_far(user_id):
     
     totals = {cat: m for cat, m in rows}
     
-    # اضافه کردن تسک باز جاری (اگر مال امروز باشد) به محاسبات گزارش
     cursor.execute('SELECT category, start_time FROM activities WHERE user_id = ? AND end_time IS NULL ORDER BY id DESC LIMIT 1', (user_id,))
     active = cursor.fetchone()
     if active:
