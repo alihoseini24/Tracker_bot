@@ -181,6 +181,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await sync_keyboards(context, user_id, chat_id, "🔄 Keyboard updated")
         return
 
+    # --- بخش اصلاح‌شده که دنبالش بودی اینجاست ---
     clean_text = text.replace("🔹 ", "").strip()
     user_categories = get_categories(user_id)
     
@@ -190,14 +191,13 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         prev_info = start_new_activity(user_id, chat_id, clean_text)
         
-        # ارسال پیام اتمام تسک قبلی (مستقل و مجزا)
         if prev_info:
             prev_msg = f"⏱️ {user_name} finished {prev_info['category']}: {prev_info['duration'] // 60}h {prev_info['duration'] % 60}m"
             await context.bot.send_message(chat_id=chat_id, text=prev_msg)
             
-        # ارسال پیام شروع تسک جدید
         new_msg = f"👤 {user_name} ➔ {clean_text}"
         await context.bot.send_message(chat_id=chat_id, text=new_msg)
+        return
 
 async def send_daily_reports(context: ContextTypes.DEFAULT_TYPE):
     import sqlite3
