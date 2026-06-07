@@ -24,7 +24,6 @@ def get_tracker_keyboard(user_id):
             row.append(KeyboardButton(categories[i+1]))
         keyboard.append(row)
     
-    # اضافه شدن دکمه‌های جدید درخواست شده در این ردیف
     keyboard.append([KeyboardButton("⏱️ Current Session"), KeyboardButton("📊 Day Report")])
     keyboard.append([KeyboardButton("❌ Cancel Task"), KeyboardButton("⚙️ Manage")])
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -160,7 +159,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=chat_id, text=msg)
         return
 
-    # پردازش دکمه بررسی وضعیت سشن فعال
     if text == "⏱️ Current Session":
         try: await update.message.delete()
         except Exception: pass
@@ -173,7 +171,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=chat_id, text=msg)
         return
 
-    # پردازش دکمه بررسی گزارش روزانه تا این لحظه
     if text == "📊 Day Report":
         try: await update.message.delete()
         except Exception: pass
@@ -225,12 +222,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         prev_info = start_new_activity(user_id, chat_id, text)
         
+        # ادغام پیام‌ها در یک ساختار واحد همراه با خط خالی فاصله
+        msg = f"👤 {user_name} ➔ {text}"
         if prev_info:
-            prev_msg = f"⏱️ {user_name} finished {prev_info['category']}: {prev_info['duration'] // 60}h {prev_info['duration'] % 60}m"
-            await context.bot.send_message(chat_id=chat_id, text=prev_msg)
+            msg += f"\n\n⏱️ Prev: {prev_info['category']} ({prev_info['duration'] // 60}h {prev_info['duration'] % 60}m)"
             
-        new_msg = f"👤 {user_name} ➔ {text}"
-        await context.bot.send_message(chat_id=chat_id, text=new_msg)
+        await context.bot.send_message(chat_id=chat_id, text=msg)
 
 async def send_daily_reports(context: ContextTypes.DEFAULT_TYPE):
     import sqlite3
