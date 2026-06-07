@@ -6,7 +6,7 @@ from http.server import SimpleHTTPRequestHandler, HTTPServer
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, CallbackQueryHandler, filters
 import sqlite3
-from database import init_db, register_user, get_categories, add_custom_category, delete_category, rename_category, start_new_activity, cancel_active_activity, get_report
+from database import init_db, register_user, register_group, get_categories, add_custom_category, delete_category, rename_category, start_new_activity, cancel_active_activity, get_report
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -16,17 +16,17 @@ def get_tracker_keyboard(user_id):
     categories = get_categories(user_id)
     keyboard = []
     for i in range(0, len(categories), 2):
-        row = [KeyboardButton(f"🔹 {categories[i]}")]
+        row = [KeyboardButton(categories[i])]
         if i + 1 < len(categories):
-            row.append(KeyboardButton(f"🔹 {categories[i+1]}"))
+            row.append(KeyboardButton(categories[i+1]))
         keyboard.append(row)
     keyboard.append([KeyboardButton("❌ Cancel Task"), KeyboardButton("⚙️ Manage")])
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-def get_user_chat_id(user_id):
+def get_user_group_id(user_id):
     conn = sqlite3.connect("tracker.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT chat_id FROM users WHERE user_id = ?", (user_id,))
+    cursor.execute("SELECT group_chat_id FROM user_groups WHERE user_id = ?", (user_id,))
     row = cursor.fetchone()
     conn.close()
     return row[0] if row else None
@@ -43,7 +43,11 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
     user_name = update.effective_user.first_name
+    
     register_user(user_id, chat_id, user_name)
+    if update.effective_chat.type in ["group", "supergroup"]:
+        register_group(user_id, chat_id)
+        
     try: await update.message.delete()
     except Exception: pass
     await context.bot.send_message(chat_id=chat_id, text=f"🎯 Registered: {user_name}", reply_markup=get_tracker_keyboard(user_id))
@@ -77,14 +81,14 @@ async def sync_keyboards(context, user_id, current_chat_id, text_msg):
     global last_group_sync_msgs
     await context.bot.send_message(chat_id=current_chat_id, text=text_msg, reply_markup=get_tracker_keyboard(user_id))
     
-    saved_chat_id = get_user_chat_id(user_id)
-    if saved_chat_id and saved_chat_id != current_chat_id:
+    saved_group_id = get_user_group_id(user_id)
+    if saved_group_id and saved_group_id != current_chat_id:
         if user_id in last_group_sync_msgs:
-            try: await context.bot.delete_message(chat_id=saved_chat_id, message_id=last_group_sync_msgs[user_id])
+            try: await context.bot.delete_message(chat_id=saved_group_id, message_id=last_group_sync_msgs[user_id])
             except Exception: pass
         try:
             msg = await context.bot.send_message(
-                chat_id=saved_chat_id, 
+                chat_id=saved_group_id, 
                 text=f"🔄 Keyboard updated: {context.user_data.get('user_name', 'User')}", 
                 reply_markup=get_tracker_keyboard(user_id)
             )
@@ -108,16 +112,16 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [[InlineKeyboardButton(c, callback_data=f"del_{c}")] for c in cats]
         await query.message.edit_text("🗑️ Select category to delete:", reply_markup=InlineKeyboardMarkup(keyboard))
         
-    elif data == "mg_ren":
-        cats = get_categories(user_id)
-        keyboard = [[InlineKeyboardButton(c, callback_data=f"renstart_{c}")] for c in cats]
-        await query.message.edit_text("✏️ Select category to rename:", reply_markup=InlineKeyboardMarkup(keyboard))
-        
     elif data.startswith("del_"):
         cat_to_del = data.replace("del_", "")
         delete_category(user_id, cat_to_del)
         await query.message.edit_text(f"🗑️ Deleted: {cat_to_del}", reply_markup=None)
         await sync_keyboards(context, user_id, chat_id, "🔄 Keyboard updated")
+        
+    elif data == "mg_ren":
+        cats = get_categories(user_id)
+        keyboard = [[InlineKeyboardButton(c, callback_data=f"renstart_{c}")] for c in cats]
+        await query.message.edit_text("✏️ Select category to rename:", reply_markup=InlineKeyboardMarkup(keyboard))
         
     elif data.startswith("renstart_"):
         cat_to_ren = data.replace("renstart_", "")
@@ -181,23 +185,19 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await sync_keyboards(context, user_id, chat_id, "🔄 Keyboard updated")
         return
 
-    # --- بخش اصلاح‌شده که دنبالش بودی اینجاست ---
-    clean_text = text.replace("🔹 ", "").strip()
     user_categories = get_categories(user_id)
-    
-    if clean_text in user_categories:
+    if text in user_categories:
         try: await update.message.delete()
         except Exception: pass
             
-        prev_info = start_new_activity(user_id, chat_id, clean_text)
+        prev_info = start_new_activity(user_id, chat_id, text)
         
         if prev_info:
             prev_msg = f"⏱️ {user_name} finished {prev_info['category']}: {prev_info['duration'] // 60}h {prev_info['duration'] % 60}m"
             await context.bot.send_message(chat_id=chat_id, text=prev_msg)
             
-        new_msg = f"👤 {user_name} ➔ {clean_text}"
+        new_msg = f"👤 {user_name} ➔ {text}"
         await context.bot.send_message(chat_id=chat_id, text=new_msg)
-        return
 
 async def send_daily_reports(context: ContextTypes.DEFAULT_TYPE):
     import sqlite3
