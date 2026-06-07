@@ -6,7 +6,10 @@ from http.server import SimpleHTTPRequestHandler, HTTPServer
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, CallbackQueryHandler, filters
 import sqlite3
-from database import init_db, register_user, register_group, get_categories, add_custom_category, delete_category, rename_category, start_new_activity, cancel_active_activity, get_report
+from database import (init_db, register_user, register_group, get_categories, 
+                      add_custom_category, delete_category, rename_category, 
+                      start_new_activity, cancel_active_activity, get_current_session, 
+                      get_day_report_so_far, get_report)
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -20,6 +23,9 @@ def get_tracker_keyboard(user_id):
         if i + 1 < len(categories):
             row.append(KeyboardButton(categories[i+1]))
         keyboard.append(row)
+    
+    # اضافه شدن دکمه‌های جدید درخواست شده در این ردیف
+    keyboard.append([KeyboardButton("⏱️ Current Session"), KeyboardButton("📊 Day Report")])
     keyboard.append([KeyboardButton("❌ Cancel Task"), KeyboardButton("⚙️ Manage")])
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
@@ -151,6 +157,33 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             msg = f"⚠️ {user_name} -> No active task"
             
+        await context.bot.send_message(chat_id=chat_id, text=msg)
+        return
+
+    # پردازش دکمه بررسی وضعیت سشن فعال
+    if text == "⏱️ Current Session":
+        try: await update.message.delete()
+        except Exception: pass
+        
+        current = get_current_session(user_id)
+        if current:
+            msg = f"⏱️ {user_name} active: {current['category']} ({current['duration'] // 60}h {current['duration'] % 60}m)"
+        else:
+            msg = f"⚠️ {user_name} -> No active task"
+        await context.bot.send_message(chat_id=chat_id, text=msg)
+        return
+
+    # پردازش دکمه بررسی گزارش روزانه تا این لحظه
+    if text == "📊 Day Report":
+        try: await update.message.delete()
+        except Exception: pass
+        
+        report_data = get_day_report_so_far(user_id)
+        if report_data:
+            lines = [f"• {cat}: {m // 60}h {m % 60}m" for cat, m in report_data.items()]
+            msg = f"📊 Today so far ({user_name}):\n" + "\n".join(lines)
+        else:
+            msg = f"📊 Today so far ({user_name}):\nNone"
         await context.bot.send_message(chat_id=chat_id, text=msg)
         return
 
