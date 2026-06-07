@@ -280,11 +280,15 @@ def main():
     Thread(target=run_health_check_server, daemon=True).start()
     application = Application.builder().token(token).build()
     
-    loop = asyncio.get_event_loop()
-    if loop.is_running():
-        asyncio.ensure_future(set_bot_commands(application))
-    else:
-        loop.run_until_complete(set_bot_commands(application))
+    # این بخش با try/except ایمن شده است تا تایم‌اوت تلگرام باعث کرش نشود
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            asyncio.ensure_future(set_bot_commands(application))
+        else:
+            loop.run_until_complete(set_bot_commands(application))
+    except Exception as e:
+        logging.error(f"Failed to set bot commands due to timeout: {e}")
     
     from datetime import time
     import pytz
@@ -298,6 +302,3 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
     application.run_polling()
-
-if __name__ == '__main__':
-    main()
