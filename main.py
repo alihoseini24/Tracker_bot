@@ -6,9 +6,9 @@ from http.server import SimpleHTTPRequestHandler, HTTPServer
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, CallbackQueryHandler, filters
 from database import (init_db, register_user, register_group, get_categories, 
-                      add_custom_category, delete_category, rename_category, 
+                      add_batch_categories, delete_category, rename_category, 
                       start_new_activity, cancel_active_activity, get_current_session, 
-                      get_day_report_so_far, get_report, clean_emoji, get_db_connection)
+                      get_day_report_so_far, get_report, get_db_connection)
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -16,25 +16,11 @@ last_group_sync_msgs = {}
 
 def get_tracker_keyboard(user_id):
     categories = get_categories(user_id)
-    
-    emoji_map = {
-        "Study": "📚 Study",
-        "Meal": "🍔 Meal",
-        "Snack": "🍿 Snack",
-        "Grocery": "🛒 Grocery",
-        "Movie/Series": "🎬 Movie/Series",
-        "Commute": "🚗 Commute",
-        "Exercises": "🏋️ Exercises",
-        "Sleep": "😴 Sleep"
-    }
-    
-    display_cats = [emoji_map.get(cat, cat) for cat in categories]
-    
     keyboard = []
-    for i in range(0, len(display_cats), 2):
-        row = [KeyboardButton(display_cats[i])]
-        if i + 1 < len(display_cats):
-            row.append(KeyboardButton(display_cats[i+1]))
+    for i in range(0, len(categories), 2):
+        row = [KeyboardButton(categories[i])]
+        if i + 1 < len(categories):
+            row.append(KeyboardButton(categories[i+1]))
         keyboard.append(row)
     
     keyboard.append([KeyboardButton("⏱️ Current Session"), KeyboardButton("📊 Day Report")])
@@ -59,7 +45,10 @@ async def set_bot_commands(application: Application):
         BotCommand("buttons", "🔄 Reload keyboard buttons"),
         BotCommand("manage", "⚙️ Manage categories")
     ]
-    await application.bot.set_my_commands(commands)
+    try:
+        await application.bot.set_my_commands(commands)
+    except Exception as e:
+        logging.error(f"Failed to set commands natively: {e}")
 
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -80,11 +69,7 @@ async def refresh_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try: await update.message.delete()
     except Exception: pass
     
-    await context.bot.send_message(
-        chat_id=chat_id, 
-        text="🔄 Buttons reloaded", 
-        reply_markup=get_tracker_keyboard(user_id)
-    )
+    await context.bot.send_message(chat_id=chat_id, text="🔄 Buttons reloaded", reply_markup=get_tracker_keyboard(user_id))
 
 async def manage_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -93,7 +78,7 @@ async def manage_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception: pass
     
     keyboard = [
-        [InlineKeyboardButton("➕ Add Category", callback_data="mg_add")],
+        [InlineKeyboardButton("➕ Add Categories (Batch)", callback_data="mg_add_batch")],
         [InlineKeyboardButton("🗑️ Delete Category", callback_data="mg_del")],
         [InlineKeyboardButton("✏️ Rename Category", callback_data="mg_ren")]
     ]
@@ -124,11 +109,30 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = query.message.chat_id
     data = query.data
     
-    if data == "mg_add":
-        context.user_data[f'action_{user_id}'] = 'adding'
+    if data == "mg_add_batch":
+        context.user_data[f'action_{user_id}'] = 'batch_adding'
+        context.user_data[f'batch_list_{user_id}'] = []
         context.user_data[f'menu_msg_id_{user_id}'] = query.message.message_id
-        await query.message.edit_text("➕ Type new category name:")
+        await query.message.edit_text("➕ Type the FIRST new category name:")
         
+    elif data == "batch_continue":
+        context.user_data[f'action_{user_id}'] = 'batch_adding'
+        await query.message.edit_text("➕ Type the NEXT category name:")
+        
+    elif data == "batch_finish":
+        categories_to_add = context.user_data.get(f'batch_list_{user_id}', [])
+        context.user_data[f'action_{user_id}'] = None
+        
+        if categories_to_add:
+            add_batch_categories(user_id, categories_to_add)
+            joined_cats = ", ".join(categories_to_add)
+            await query.message.edit_text(f"✅ Batch processing complete! Added: {joined_cats}")
+            await sync_keyboards(context, user_id, chat_id, "🔄 Keyboard updated with new categories")
+        else:
+            await query.message.edit_text("⚠️ No categories were added.")
+            
+        context.user_data[f'batch_list_{user_id}'] = []
+
     elif data == "mg_del":
         cats = get_categories(user_id)
         keyboard = [[InlineKeyboardButton(c, callback_data=f"del_{c}")] for c in cats]
@@ -204,17 +208,27 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     action = context.user_data.get(f'action_{user_id}')
     menu_msg_id = context.user_data.get(f'menu_msg_id_{user_id}')
     
-    if action == 'adding':
+    if action == 'batch_adding':
         try: await update.message.delete()
         except Exception: pass
-        add_custom_category(user_id, text)
-        context.user_data[f'action_{user_id}'] = None
+        
+        if f'batch_list_{user_id}' not in context.user_data:
+            context.user_data[f'batch_list_{user_id}'] = []
+            
+        context.user_data[f'batch_list_{user_id}'].append(text)
+        context.user_data[f'action_{user_id}'] = None  # قفل موقت تا زدن دکمه شیشه‌ای بعدی
+        
+        keyboard = [
+            [InlineKeyboardButton("➕ Add Another One", callback_data="batch_continue")],
+            [InlineKeyboardButton("✅ Save & Finish", callback_data="batch_finish")]
+        ]
+        
+        current_list = "\n".join([f"- {c}" for c in context.user_data[f'batch_list_{user_id}']])
+        follow_up_text = f"📝 Current items to add:\n{current_list}\n\nWhat would you like to do next?"
         
         if menu_msg_id:
-            try: await context.bot.edit_message_text(chat_id=chat_id, message_id=menu_msg_id, text=f"➕ Added: {text}")
+            try: await context.bot.edit_message_text(chat_id=chat_id, message_id=menu_msg_id, text=follow_up_text, reply_markup=InlineKeyboardMarkup(keyboard))
             except Exception: pass
-        
-        await sync_keyboards(context, user_id, chat_id, "🔄 Keyboard updated")
         return
         
     elif action == 'renaming':
@@ -232,15 +246,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await sync_keyboards(context, user_id, chat_id, "🔄 Keyboard updated")
         return
 
-    clean_text = clean_emoji(text)
     user_categories = get_categories(user_id)
-    
-    if clean_text in user_categories:
+    if text in user_categories:
         try: await update.message.delete()
         except Exception: pass
             
-        prev_info = start_new_activity(user_id, chat_id, clean_text)
-        
+        prev_info = start_new_activity(user_id, chat_id, text)
         msg = f"👤 {user_name} ➔ {text}"
         if prev_info:
             msg += f"\n\n⏱️ Prev: {prev_info['category']} ({prev_info['duration'] // 60}h {prev_info['duration'] % 60}m)"
@@ -280,7 +291,6 @@ def main():
     Thread(target=run_health_check_server, daemon=True).start()
     application = Application.builder().token(token).build()
     
-    # این بخش با try/except ایمن شده است تا تایم‌اوت تلگرام باعث کرش نشود
     try:
         loop = asyncio.get_event_loop()
         if loop.is_running():
@@ -302,5 +312,6 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
     application.run_polling()
+
 if __name__ == '__main__':
     main()
