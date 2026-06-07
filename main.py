@@ -9,7 +9,7 @@ import sqlite3
 from database import (init_db, register_user, register_group, get_categories, 
                       add_custom_category, delete_category, rename_category, 
                       start_new_activity, cancel_active_activity, get_current_session, 
-                      get_day_report_so_far, get_report)
+                      get_day_report_so_far, get_report, clean_emoji)
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -17,11 +17,26 @@ last_group_sync_msgs = {}
 
 def get_tracker_keyboard(user_id):
     categories = get_categories(user_id)
+    
+    # مپ کردن ایموجی‌ها به دسته‌بندی‌های پیش‌فرض فقط برای نمایش روی دکمه‌ها
+    emoji_map = {
+        "Study": "📚 Study",
+        "Meal": "🍔 Meal",
+        "Snack": "🍿 Snack",
+        "Grocery": "🛒 Grocery",
+        "Movie/Series": "🎬 Movie/Series",
+        "Commute": "🚗 Commute",
+        "Exercises": "🏋️ Exercises",
+        "Sleep": "😴 Sleep"
+    }
+    
+    display_cats = [emoji_map.get(cat, cat) for cat in categories]
+    
     keyboard = []
-    for i in range(0, len(categories), 2):
-        row = [KeyboardButton(categories[i])]
-        if i + 1 < len(categories):
-            row.append(KeyboardButton(categories[i+1]))
+    for i in range(0, len(display_cats), 2):
+        row = [KeyboardButton(display_cats[i])]
+        if i + 1 < len(display_cats):
+            row.append(KeyboardButton(display_cats[i+1]))
         keyboard.append(row)
     
     keyboard.append([KeyboardButton("⏱️ Current Session"), KeyboardButton("📊 Day Report")])
@@ -80,6 +95,7 @@ async def manage_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🗑️ Delete Category", callback_data="mg_del")],
         [InlineKeyboardButton("✏️ Rename Category", callback_data="mg_ren")]
     ]
+    await context.bot.set_my_commands(context.application)
     await context.bot.send_message(chat_id=chat_id, text="⚙️ Manage Categories:", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def sync_keyboards(context, user_id, current_chat_id, text_msg):
@@ -215,14 +231,16 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await sync_keyboards(context, user_id, chat_id, "🔄 Keyboard updated")
         return
 
+    # تمیز کردن ورودی از ایموجی جهت اعتبارسنجی دقیق با دیتابیس
+    clean_text = clean_emoji(text)
     user_categories = get_categories(user_id)
-    if text in user_categories:
+    
+    if clean_text in user_categories:
         try: await update.message.delete()
         except Exception: pass
             
-        prev_info = start_new_activity(user_id, chat_id, text)
+        prev_info = start_new_activity(user_id, chat_id, clean_text)
         
-        # ادغام پیام‌ها در یک ساختار واحد همراه با خط خالی فاصله
         msg = f"👤 {user_name} ➔ {text}"
         if prev_info:
             msg += f"\n\n⏱️ Prev: {prev_info['category']} ({prev_info['duration'] // 60}h {prev_info['duration'] % 60}m)"
