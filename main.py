@@ -5,11 +5,10 @@ from threading import Thread
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, CallbackQueryHandler, filters
-import sqlite3
 from database import (init_db, register_user, register_group, get_categories, 
                       add_custom_category, delete_category, rename_category, 
                       start_new_activity, cancel_active_activity, get_current_session, 
-                      get_day_report_so_far, get_report, clean_emoji)
+                      get_day_report_so_far, get_report, clean_emoji, get_db_connection)
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -18,7 +17,6 @@ last_group_sync_msgs = {}
 def get_tracker_keyboard(user_id):
     categories = get_categories(user_id)
     
-    # مپ کردن ایموجی‌ها به دسته‌بندی‌های پیش‌فرض فقط برای نمایش روی دکمه‌ها
     emoji_map = {
         "Study": "📚 Study",
         "Meal": "🍔 Meal",
@@ -44,12 +42,16 @@ def get_tracker_keyboard(user_id):
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 def get_user_group_id(user_id):
-    conn = sqlite3.connect("tracker.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT group_chat_id FROM user_groups WHERE user_id = ?", (user_id,))
-    row = cursor.fetchone()
-    conn.close()
-    return row[0] if row else None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT group_chat_id FROM user_groups WHERE user_id = %s", (user_id,))
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return row['group_chat_id'] if row else None
+    except Exception:
+        return None
 
 async def set_bot_commands(application: Application):
     commands = [
@@ -95,7 +97,6 @@ async def manage_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🗑️ Delete Category", callback_data="mg_del")],
         [InlineKeyboardButton("✏️ Rename Category", callback_data="mg_ren")]
     ]
-    await context.bot.set_my_commands(context.application)
     await context.bot.send_message(chat_id=chat_id, text="⚙️ Manage Categories:", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def sync_keyboards(context, user_id, current_chat_id, text_msg):
@@ -231,7 +232,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await sync_keyboards(context, user_id, chat_id, "🔄 Keyboard updated")
         return
 
-    # تمیز کردن ورودی از ایموجی جهت اعتبارسنجی دقیق با دیتابیس
     clean_text = clean_emoji(text)
     user_categories = get_categories(user_id)
     
@@ -248,17 +248,22 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=chat_id, text=msg)
 
 async def send_daily_reports(context: ContextTypes.DEFAULT_TYPE):
-    import sqlite3
-    conn = sqlite3.connect("tracker.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT user_id, chat_id, user_name FROM users")
-    users = cursor.fetchall()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id, chat_id, user_name FROM users")
+        users = cursor.fetchall()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        logging.error(f"Error fetching users for report: {e}")
+        return
     
-    for user_id, chat_id, user_name in users:
+    for user in users:
+        user_id, chat_id, user_name = user['user_id'], user['chat_id'], user['user_name']
         report_msg = f"📊 Report: {user_name}\n\n📅 Today:\n{get_report(user_id, 1)}\n📅 Week:\n{get_report(user_id, 7)}\n📅 Month:\n{get_report(user_id, 30)}"
         try: await context.bot.send_message(chat_id=chat_id, text=report_msg)
-        except Exception as e: logging.error(f"Error: {e}")
+        except Exception as e: logging.error(f"Error sending report to {user_id}: {e}")
 
 def run_health_check_server():
     port = int(os.environ.get("PORT", 8080))
@@ -266,10 +271,12 @@ def run_health_check_server():
     server.serve_forever()
 
 def main():
-    init_db()
     token = os.environ.get("TELEGRAM_TOKEN")
-    if not token: return
+    if not token or not os.environ.get("DATABASE_URL"):
+        logging.error("Missing TELEGRAM_TOKEN or DATABASE_URL")
+        return
 
+    init_db()
     Thread(target=run_health_check_server, daemon=True).start()
     application = Application.builder().token(token).build()
     
