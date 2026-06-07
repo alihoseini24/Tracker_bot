@@ -67,7 +67,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         prev_info = start_new_activity(user_id, chat_id, text)
         msg = f"👤 {user_name} --> {text}"
         if prev_info:
-            msg += f"\n⏱ فعالیت قبلی ({prev_info['category']}) به مدت {prev_info['duration'] // 60} ساعت و {prev_info['duration'] % 60} دقیقه طول کشید."
+            msg += f"\n\n⏱  ({prev_info['category']}) به مدت {prev_info['duration'] // 60} ساعت و {prev_info['duration'] % 60} دقیقه طول کشید."
         await update.message.reply_text(msg)
 
 async def send_daily_reports(context: ContextTypes.DEFAULT_TYPE):
