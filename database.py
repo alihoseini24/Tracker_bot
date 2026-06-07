@@ -76,12 +76,6 @@ def register_group(user_id, group_chat_id):
     finally:
         conn.close()
 
-def clean_emoji(text):
-    emojis = ["📚 ", "🍔 ", "🍿 ", "🛒 ", "🎬 ", "🚗 ", "🏋️ ", "😴 "]
-    for e in emojis:
-        text = text.replace(e, "")
-    return text.strip()
-
 def get_categories(user_id):
     default_cats = ["Study", "Meal", "Snack", "Grocery", "Movie/Series", "Commute", "Exercises", "Sleep"]
     conn = get_db_connection()
@@ -94,23 +88,7 @@ def get_categories(user_id):
     finally:
         conn.close()
 
-def add_custom_category(user_id, category):
-    category = clean_emoji(category)
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT category FROM categories WHERE user_id = %s", (user_id,))
-        if not cursor.fetchall():
-            for cat in get_categories(user_id):
-                cursor.execute("INSERT INTO categories VALUES (%s, %s) ON CONFLICT DO NOTHING", (user_id, cat))
-        cursor.execute("INSERT INTO categories VALUES (%s, %s) ON CONFLICT DO NOTHING", (user_id, category))
-        conn.commit()
-        cursor.close()
-    finally:
-        conn.close()
-
-def delete_category(user_id, category):
-    category = clean_emoji(category)
+def add_batch_categories(user_id, categories_list):
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -119,15 +97,31 @@ def delete_category(user_id, category):
             for cat in get_categories(user_id):
                 cursor.execute("INSERT INTO categories VALUES (%s, %s) ON CONFLICT DO NOTHING", (user_id, cat))
         
-        cursor.execute("DELETE FROM categories WHERE user_id = %s AND category = %s", (user_id, category))
+        for category in categories_list:
+            category = category.strip()
+            if category:
+                cursor.execute("INSERT INTO categories VALUES (%s, %s) ON CONFLICT DO NOTHING", (user_id, category))
+        conn.commit()
+        cursor.close()
+    finally:
+        conn.close()
+
+def delete_category(user_id, category):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT category FROM categories WHERE user_id = %s", (user_id,))
+        if not cursor.fetchall():
+            for cat in get_categories(user_id):
+                cursor.execute("INSERT INTO categories VALUES (%s, %s) ON CONFLICT DO NOTHING", (user_id, cat))
+        
+        cursor.execute("DELETE FROM categories WHERE user_id = %s AND category = %s", (user_id, category.strip()))
         conn.commit()
         cursor.close()
     finally:
         conn.close()
 
 def rename_category(user_id, old_name, new_name):
-    old_name = clean_emoji(old_name)
-    new_name = clean_emoji(new_name)
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -136,14 +130,13 @@ def rename_category(user_id, old_name, new_name):
             for cat in get_categories(user_id):
                 cursor.execute("INSERT INTO categories VALUES (%s, %s) ON CONFLICT DO NOTHING", (user_id, cat))
                 
-        cursor.execute("UPDATE categories SET category = %s WHERE user_id = %s AND category = %s", (new_name, user_id, old_name))
+        cursor.execute("UPDATE categories SET category = %s WHERE user_id = %s AND category = %s", (new_name.strip(), user_id, old_name.strip()))
         conn.commit()
         cursor.close()
     finally:
         conn.close()
 
 def start_new_activity(user_id, chat_id, category):
-    category = clean_emoji(category)
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -159,7 +152,7 @@ def start_new_activity(user_id, chat_id, category):
             cursor.execute('UPDATE activities SET end_time = %s, duration_minutes = %s WHERE id = %s', (now, duration, act_id))
             prev_info = {"category": last_act['category'], "duration": duration}
         
-        cursor.execute('INSERT INTO activities (user_id, chat_id, category, start_time) VALUES (%s, %s, %s, %s)', (user_id, chat_id, category, now))
+        cursor.execute('INSERT INTO activities (user_id, chat_id, category, start_time) VALUES (%s, %s, %s, %s)', (user_id, chat_id, category.strip(), now))
         conn.commit()
         cursor.close()
         return prev_info
