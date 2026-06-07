@@ -10,6 +10,9 @@ from database import init_db, register_user, get_categories, add_custom_category
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
+# متغیر سراسری برای ذخیره آیدی آخرین پیام آپدیت کیبورد در گروه جهت پاکسازی بعدی
+last_group_sync_msgs = {}
+
 def get_tracker_keyboard(user_id):
     categories = get_categories(user_id)
     keyboard = []
@@ -18,11 +21,10 @@ def get_tracker_keyboard(user_id):
         if i + 1 < len(categories):
             row.append(KeyboardButton(categories[i+1]))
         keyboard.append(row)
-    keyboard.append([KeyboardButton("⚙️ مدیریت دسته‌بندی‌ها")])
+    keyboard.append([KeyboardButton("Manage Categories")])
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 def get_user_chat_id(user_id):
-    # پیدا کردن آخرین چت‌باکس (گروه یا پی‌وی) که کاربر در آن ثبت‌نام کرده
     conn = sqlite3.connect("tracker.db")
     cursor = conn.cursor()
     cursor.execute("SELECT chat_id FROM users WHERE user_id = ?", (user_id,))
@@ -32,9 +34,9 @@ def get_user_chat_id(user_id):
 
 async def set_bot_commands(application: Application):
     commands = [
-        BotCommand("register", "ثبت‌نام و فعال‌سازی کیبورد"),
-        BotCommand("buttons", "احیا و ظاهر کردن مجدد دکمه‌ها"),
-        BotCommand("manage", "مدیریت دسته‌بندی‌ها")
+        BotCommand("register", "Register & active keyboard"),
+        BotCommand("buttons", "Reload keyboard buttons"),
+        BotCommand("manage", "Manage categories")
     ]
     await application.bot.set_my_commands(commands)
 
@@ -45,7 +47,7 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     register_user(user_id, chat_id, user_name)
     try: await update.message.delete()
     except Exception: pass
-    await context.bot.send_message(chat_id=chat_id, text=f"🎯 کاربر {user_name} ثبت شد. کیبورد اختصاصی شما فعال گردید.", reply_markup=get_tracker_keyboard(user_id))
+    await context.bot.send_message(chat_id=chat_id, text=f"Registered: {user_name}", reply_markup=get_tracker_keyboard(user_id))
 
 async def refresh_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -53,14 +55,12 @@ async def refresh_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try: await update.message.delete()
     except Exception: pass
     
-    msg = await context.bot.send_message(
+    # برای جلوگیری از بسته شدن منو توسط تلگرام، هیچ پیامی پاک نمی‌شود
+    await context.bot.send_message(
         chat_id=chat_id, 
-        text="🔄 دکمه‌های پایین چت شما مجدداً بارگذاری شدند.", 
+        text="Buttons reloaded", 
         reply_markup=get_tracker_keyboard(user_id)
     )
-    await asyncio.sleep(2)
-    try: await msg.delete()
-    except Exception: pass
 
 async def manage_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -69,25 +69,31 @@ async def manage_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception: pass
     
     keyboard = [
-        [InlineKeyboardButton("➕ افزودن دسته‌بندی", callback_data="mg_add")],
-        [InlineKeyboardButton("❌ حذف دسته‌بندی", callback_data="mg_del")],
-        [InlineKeyboardButton("✏️ تغییر نام دسته‌بندی", callback_data="mg_ren")]
+        [InlineKeyboardButton("Add Category", callback_data="mg_add")],
+        [InlineKeyboardButton("Delete Category", callback_data="mg_del")],
+        [InlineKeyboardButton("Rename Category", callback_data="mg_ren")]
     ]
-    await context.bot.send_message(chat_id=chat_id, text=f"⚙️ منوی مدیریت دسته‌بندی‌ها\nیک گزینه را انتخاب کنید:", reply_markup=InlineKeyboardMarkup(keyboard))
+    await context.bot.send_message(chat_id=chat_id, text="Manage Categories:", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def sync_keyboards(context, user_id, current_chat_id, text_msg):
-    # آپدیت چت فعلی (مثلاً پی‌وی)
+    global last_group_sync_msgs
     await context.bot.send_message(chat_id=current_chat_id, text=text_msg, reply_markup=get_tracker_keyboard(user_id))
     
-    # آپدیت گروه اصلی (اگر با چت فعلی متفاوت باشد)
     saved_chat_id = get_user_chat_id(user_id)
     if saved_chat_id and saved_chat_id != current_chat_id:
+        # پاک کردن پیام اطلاع‌رسانی قبلی در گروه برای خلوت ماندن چت
+        if user_id in last_group_sync_msgs:
+            try:
+                await context.bot.delete_message(chat_id=saved_chat_id, message_id=last_group_sync_msgs[user_id])
+            except Exception:
+                pass
         try:
-            await context.bot.send_message(
+            msg = await context.bot.send_message(
                 chat_id=saved_chat_id, 
-                text=f"🔄 کیبورد {context.user_data.get('user_name', 'کاربر')} به‌روزرسانی شد.", 
+                text=f"Keyboard updated: {context.user_data.get('user_name', 'User')}", 
                 reply_markup=get_tracker_keyboard(user_id)
             )
+            last_group_sync_msgs[user_id] = msg.message_id
         except Exception:
             pass
 
@@ -101,30 +107,30 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "mg_add":
         context.user_data[f'action_{user_id}'] = 'adding'
         context.user_data[f'menu_msg_id_{user_id}'] = query.message.message_id
-        await query.message.edit_text("👤 لطفاً نام دسته‌بندی جدید را تایپ و ارسال کنید:")
+        await query.message.edit_text("Type new category name:")
         
     elif data == "mg_del":
         cats = get_categories(user_id)
         keyboard = [[InlineKeyboardButton(c, callback_data=f"del_{c}")] for c in cats]
-        await query.message.edit_text("❌ کدام دسته‌بندی حذف شود؟", reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.message.edit_text("Select category to delete:", reply_markup=InlineKeyboardMarkup(keyboard))
         
     elif data == "mg_ren":
         cats = get_categories(user_id)
         keyboard = [[InlineKeyboardButton(c, callback_data=f"renstart_{c}")] for c in cats]
-        await query.message.edit_text("✏️ نام کدام دسته‌بندی را تغییر می‌دهید؟", reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.message.edit_text("Select category to rename:", reply_markup=InlineKeyboardMarkup(keyboard))
         
     elif data.startswith("del_"):
         cat_to_del = data.replace("del_", "")
         delete_category(user_id, cat_to_del)
-        await query.message.edit_text(f"✅ دسته‌بندی {cat_to_del} با موفقیت حذف شد.", reply_markup=None)
-        await sync_keyboards(context, user_id, chat_id, "🔄 کیبورد شما به‌روزرسانی شد.")
+        await query.message.edit_text(f"Deleted: {cat_to_del}", reply_markup=None)
+        await sync_keyboards(context, user_id, chat_id, "Keyboard updated")
         
     elif data.startswith("renstart_"):
         cat_to_ren = data.replace("renstart_", "")
         context.user_data[f'action_{user_id}'] = 'renaming'
         context.user_data[f'old_name_{user_id}'] = cat_to_ren
         context.user_data[f'menu_msg_id_{user_id}'] = query.message.message_id
-        await query.message.edit_text(f"✏️ نام جدید را برای دسته‌بندی {cat_to_ren} ارسال کنید:")
+        await query.message.edit_text(f"Type new name for {cat_to_ren}:")
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -133,7 +139,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['user_name'] = user_name
     text = update.message.text.strip()
     
-    if text == "⚙️ مدیریت دسته‌بندی‌ها" or text == "/manage":
+    if text == "Manage Categories" or text == "/manage":
         await manage_menu(update, context)
         return
 
@@ -147,10 +153,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data[f'action_{user_id}'] = None
         
         if menu_msg_id:
-            try: await context.bot.edit_message_text(chat_id=chat_id, message_id=menu_msg_id, text=f"✅ دسته‌بندی {text} با موفقیت اضافه شد.")
+            try: await context.bot.edit_message_text(chat_id=chat_id, message_id=menu_msg_id, text=f"Added: {text}")
             except Exception: pass
         
-        await sync_keyboards(context, user_id, chat_id, "🔄 کیبورد شما به‌روزرسانی شد.")
+        await sync_keyboards(context, user_id, chat_id, "Keyboard updated")
         return
         
     elif action == 'renaming':
@@ -162,10 +168,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data[f'old_name_{user_id}'] = None
         
         if menu_msg_id:
-            try: await context.bot.edit_message_text(chat_id=chat_id, message_id=menu_msg_id, text=f"✅ نام دسته‌بندی از {old_name} به {text} تغییر یافت.")
+            try: await context.bot.edit_message_text(chat_id=chat_id, message_id=menu_msg_id, text=f"Renamed: {old_name} -> {text}")
             except Exception: pass
             
-        await sync_keyboards(context, user_id, chat_id, "🔄 کیبورد شما به‌روزرسانی شد.")
+        await sync_keyboards(context, user_id, chat_id, "Keyboard updated")
         return
 
     user_categories = get_categories(user_id)
@@ -174,9 +180,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception: pass
             
         prev_info = start_new_activity(user_id, chat_id, text)
-        msg = f"👤 {user_name} --> {text}"
+        msg = f"{user_name} -> {text}"
         if prev_info:
-            msg += f"\n\n⏱ ({prev_info['category']}) به مدت {prev_info['duration'] // 60} ساعت و {prev_info['duration'] % 60} دقیقه طول کشید."
+            msg += f"\nPrev: {prev_info['category']} ({prev_info['duration'] // 60}h {prev_info['duration'] % 60}m)"
         await context.bot.send_message(chat_id=chat_id, text=msg)
 
 async def send_daily_reports(context: ContextTypes.DEFAULT_TYPE):
@@ -188,8 +194,8 @@ async def send_daily_reports(context: ContextTypes.DEFAULT_TYPE):
     conn.close()
     
     for user_id, chat_id, user_name in users:
-        report_msg = f"📊 گزارش عملکرد شبانه {user_name}\n\n📅 امروز:\n{get_report(user_id, 1)}\n📅 این هفته:\n{get_report(user_id, 7)}\n📅 این ماه:\n{get_report(user_id, 30)}"
-        try: await context.bot.send_message(chat_id=chat_id, text=report_msg, parse_mode="Markdown")
+        report_msg = f"Report: {user_name}\n\nToday:\n{get_report(user_id, 1)}\nWeek:\n{get_report(user_id, 7)}\nMonth:\n{get_report(user_id, 30)}"
+        try: await context.bot.send_message(chat_id=chat_id, text=report_msg)
         except Exception as e: logging.error(f"Error: {e}")
 
 def run_health_check_server():
