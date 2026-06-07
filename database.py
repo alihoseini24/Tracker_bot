@@ -48,6 +48,7 @@ def get_categories(user_id):
     cursor.execute("SELECT category FROM categories WHERE user_id = ?", (user_id,))
     rows = cursor.fetchall()
     conn.close()
+    # اگر کاربر در دیتابیس رکورد داشت، دقیقاً همان‌ها را برگردان، در غیر این صورت لیست پیش‌فرض
     return [r[0] for r in rows] if rows else default_cats
 
 def add_custom_category(user_id, category):
