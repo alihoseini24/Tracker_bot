@@ -61,6 +61,31 @@ def add_custom_category(user_id, category):
     conn.commit()
     conn.close()
 
+def delete_category(user_id, category):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    # اگر کلاً تا حالا دسته‌بندی شخصی نداشته، اول پیش‌فرض‌ها را بکاپ بگیر
+    cursor.execute("SELECT category FROM categories WHERE user_id = ?", (user_id,))
+    if not cursor.fetchall():
+        for cat in get_categories(user_id):
+            cursor.execute("INSERT OR IGNORE INTO categories VALUES (?, ?)", (user_id, cat))
+    
+    cursor.execute("DELETE FROM categories WHERE user_id = ? AND category = ?", (user_id, category))
+    conn.commit()
+    conn.close()
+
+def rename_category(user_id, old_name, new_name):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT category FROM categories WHERE user_id = ?", (user_id,))
+    if not cursor.fetchall():
+        for cat in get_categories(user_id):
+            cursor.execute("INSERT OR IGNORE INTO categories VALUES (?, ?)", (user_id, cat))
+            
+    cursor.execute("UPDATE categories SET category = ? WHERE user_id = ? AND category = ?", (new_name, user_id, old_name))
+    conn.commit()
+    conn.close()
+
 def start_new_activity(user_id, chat_id, category):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
