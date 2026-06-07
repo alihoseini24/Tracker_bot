@@ -35,7 +35,7 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     register_user(user_id, chat_id, user_name)
     
     await update.message.reply_text(
-        f"🎯 کاربر **{user_name}** ثبت شد. کیبورد اختصاصی شما در پایین چت فعال گردید.",
+        f"🎯 کاربر {user_name} ثبت شد. کیبورد اختصاصی شما در پایین چت فعال گردید.",
         reply_markup=get_tracker_keyboard(user_id)
     )
 
@@ -50,7 +50,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         add_custom_category(user_id, text)
         context.user_data[f'waiting_{user_id}'] = False
         await update.message.reply_text(
-            f"✅ دسته‌بندی **{text}** برای **{user_name}** اضافه شد.",
+            f"✅ دسته‌بندی {text} برای {user_name} اضافه شد.",
             reply_markup=get_tracker_keyboard(user_id)
         )
         return
@@ -58,16 +58,16 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ۲. اگر دکمه "افزودن دسته‌بندی جدید" فشرده شد
     if text == "➕ افزودن دسته‌بندی جدید":
         context.user_data[f'waiting_{user_id}'] = True
-        await update.message.reply_text(f"👤 **{user_name}**، نام دسته‌بندی جدید را تایپ و ارسال کنید:")
+        await update.message.reply_text(f"👤 {user_name}، نام دسته‌بندی جدید را تایپ و ارسال کنید:")
         return
 
     # ۳. پردازش دکمه‌های تسک‌ها
     categories = get_categories(user_id)
     if text in categories:
         prev_info = start_new_activity(user_id, chat_id, text)
-        msg = f"👤 **{user_name}** فعالیت جدید را شروع کرد: **{text}**"
+        msg = f"👤 {user_name} --> {text}"
         if prev_info:
-            msg += f"\n⏱ فعالیت قبلی (**{prev_info['category']}**) به مدت **{prev_info['duration'] // 60} ساعت و {prev_info['duration'] % 60} دقیقه** طول کشید."
+            msg += f"\n⏱ فعالیت قبلی ({prev_info['category']}) به مدت {prev_info['duration'] // 60} ساعت و {prev_info['duration'] % 60} دقیقه طول کشید."
         await update.message.reply_text(msg)
 
 async def send_daily_reports(context: ContextTypes.DEFAULT_TYPE):
@@ -80,10 +80,10 @@ async def send_daily_reports(context: ContextTypes.DEFAULT_TYPE):
     
     for user_id, chat_id, user_name in users:
         report_msg = (
-            f"📊 **گزارش عملکرد شبانه {user_name}**\n\n"
-            f"📅 **امروز:**\n{get_report(user_id, 1)}\n"
-            f"📅 **این هفته:**\n{get_report(user_id, 7)}\n"
-            f"📅 **این ماه:**\n{get_report(user_id, 30)}"
+            f"📊 گزارش عملکرد شبانه {user_name}\n\n"
+            f"📅 امروز:\n{get_report(user_id, 1)}\n"
+            f"📅 این هفته:\n{get_report(user_id, 7)}\n"
+            f"📅 این ماه:\n{get_report(user_id, 30)}"
         )
         try:
             await context.bot.send_message(chat_id=chat_id, text=report_msg, parse_mode="Markdown")
