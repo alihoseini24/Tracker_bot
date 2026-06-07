@@ -64,7 +64,6 @@ def add_custom_category(user_id, category):
 def delete_category(user_id, category):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    # اگر کلاً تا حالا دسته‌بندی شخصی نداشته، اول پیش‌فرض‌ها را بکاپ بگیر
     cursor.execute("SELECT category FROM categories WHERE user_id = ?", (user_id,))
     if not cursor.fetchall():
         for cat in get_categories(user_id):
@@ -109,6 +108,22 @@ def start_new_activity(user_id, chat_id, category):
     conn.close()
     return prev_info
 
+def cancel_active_activity(user_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    # پیدا کردن آخرین تسکی که هنوز end_time ندارد
+    cursor.execute('SELECT id, category FROM activities WHERE user_id = ? AND end_time IS NULL ORDER BY id DESC LIMIT 1', (user_id,))
+    row = cursor.fetchone()
+    
+    if row:
+        act_id, category = row
+        cursor.execute('DELETE FROM activities WHERE id = ?', (act_id,))
+        conn.commit()
+        conn.close()
+        return category
+    conn.close()
+    return None
+
 def get_report(user_id, days):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -117,5 +132,5 @@ def get_report(user_id, days):
     rows = cursor.fetchall()
     conn.close()
     
-    if not rows: return "هیچ فعالیتی ثبت نشده است.\n"
-    return "".join([f"• **{cat}**: {m // 60}h {m % 60}m\n" for cat, m in rows])
+    if not rows: return "None\n"
+    return "".join([f"• {cat}: {m // 60}h {m % 60}m\n" for cat, m in rows])
