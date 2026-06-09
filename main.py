@@ -287,7 +287,6 @@ async def check_focus_reminders(context: ContextTypes.DEFAULT_TYPE):
     active_targets = get_all_users_with_reminders()
     for target in active_targets:
         u_id = target['user_id']
-        pvt_chat_id = target['chat_id'] # ارسال فقط به چت خصوصی کاربر ثبت شده
         
         current = get_current_session(u_id)
         if current:
@@ -296,9 +295,10 @@ async def check_focus_reminders(context: ContextTypes.DEFAULT_TYPE):
             reminder_msg = "🔔 به چه مشغولی؟ یه کار مفید انجام بده."
             
         try:
-            await context.bot.send_message(chat_id=pvt_chat_id, text=reminder_msg)
+            # استفاده از u_id به جای chat_id تضمین می‌کند پیام فقط به پی‌وی شخص برود
+            await context.bot.send_message(chat_id=u_id, text=reminder_msg)
         except Exception as e:
-            logging.error(f"Could not send focus reminder to private chat {pvt_chat_id}: {e}")
+            logging.error(f"Could not send focus reminder to private chat {u_id}: {e}")
 
 async def send_daily_reports(context: ContextTypes.DEFAULT_TYPE):
     try:
