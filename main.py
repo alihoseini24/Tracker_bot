@@ -331,23 +331,27 @@ def main():
 
     init_db()
     Thread(target=run_health_check_server, daemon=True).start()
+    
     application = Application.builder().token(token).build()
     
+    # تنظیم دستورات منو بدون بستن لوپ اصلی با استفاده از لوپ داخلی خود ربات
     try:
-        try:
-            loop = asyncio.get_running_loop()
-            asyncio.ensure_future(set_bot_commands(application))
-        except RuntimeError:
-            asyncio.run(set_bot_commands(application))
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+    try:
+        loop.run_until_complete(set_bot_commands(application))
     except Exception as e:
-        logging.error(f"Failed to set bot commands due to timeout: {e}")
+        logging.error(f"Failed to set bot commands: {e}")
     
     tz_rome = pytz.timezone("Europe/Rome")
     
     # کرون جاب گزارش شبانه
     application.job_queue.run_daily(send_daily_reports, time=time(hour=0, minute=0, second=0, tzinfo=tz_rome))
     
-    # کرون جاب یادآور تمرکز ۱۵ دقیقه‌ای (تکرار متوالی کل روز - فیلتر ساعت ۷ صبح داخل تابع اعمال می‌شود)
+    # کرون جاب یادآور تمرکز ۱۵ دقیقه‌ای
     application.job_queue.run_repeating(check_focus_reminders, interval=timedelta(minutes=15), first=time(hour=7, minute=0, second=0, tzinfo=tz_rome))
 
     application.add_handler(CommandHandler("register", register))
