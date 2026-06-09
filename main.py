@@ -1,12 +1,14 @@
 import os
 import logging
 import asyncio
+import pytz
+from datetime import time, datetime
 from threading import Thread
 from http.server import SimpleHTTPRequestHandler, HTTPServer
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand, ReplyKeyboardRemove
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, CallbackQueryHandler, filters
-from database import (init_db, register_user, register_group, get_categories, 
-                      add_batch_categories, delete_category, rename_category, 
+from database import (init_db, register_user, unregister_user, toggle_reminders, get_all_users_with_reminders,
+                      register_group, get_categories, add_batch_categories, delete_category, rename_category, 
                       start_new_activity, cancel_active_activity, get_current_session, 
                       get_day_report_so_far, get_report, get_db_connection)
 
@@ -43,7 +45,7 @@ async def set_bot_commands(application: Application):
     commands = [
         BotCommand("register", "🎯 Register & active keyboard"),
         BotCommand("buttons", "🔄 Reload keyboard buttons"),
-        BotCommand("manage", "⚙️ Manage categories")
+        BotCommand("manage", "⚙️ Manage categories / options")
     ]
     try:
         await application.bot.set_my_commands(commands)
@@ -80,9 +82,11 @@ async def manage_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("➕ Add Categories (Batch)", callback_data="mg_add_batch")],
         [InlineKeyboardButton("🗑️ Delete Category", callback_data="mg_del")],
-        [InlineKeyboardButton("✏️ Rename Category", callback_data="mg_ren")]
+        [InlineKeyboardButton("✏️ Rename Category", callback_data="mg_ren")],
+        [InlineKeyboardButton("🔔 Toggle 15-Min Reminders", callback_data="mg_toggle_remind")],
+        [InlineKeyboardButton("⚠️ Unregister from Bot", callback_data="mg_unreg_confirm")]
     ]
-    await context.bot.send_message(chat_id=chat_id, text="⚙️ Manage Categories:", reply_markup=InlineKeyboardMarkup(keyboard))
+    await context.bot.send_message(chat_id=chat_id, text="⚙️ Manage System Options:", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def sync_keyboards(context, user_id, current_chat_id, text_msg):
     global last_group_sync_msgs
@@ -130,7 +134,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await sync_keyboards(context, user_id, chat_id, "🔄 Keyboard updated with new categories")
         else:
             await query.message.edit_text("⚠️ No categories were added.")
-            
         context.user_data[f'batch_list_{user_id}'] = []
 
     elif data == "mg_del":
@@ -156,6 +159,26 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data[f'menu_msg_id_{user_id}'] = query.message.message_id
         await query.message.edit_text(f"✏️ Type new name for {cat_to_ren}:")
 
+    elif data == "mg_toggle_remind":
+        is_enabled = toggle_reminders(user_id)
+        status_txt = "✅ Enabled" if is_enabled else "❌ Disabled"
+        await query.message.edit_text(f"🔔 15-Minute Reminders are now: {status_txt}")
+
+    elif data == "mg_unreg_confirm":
+        keyboard = [
+            [InlineKeyboardButton("🛑 Yes, Delete Me", callback_data="mg_unreg_final")],
+            [InlineKeyboardButton("🔙 Cancel", callback_data="mg_cancel_unreg")]
+        ]
+        await query.message.edit_text("⚠️ Are you sure you want to unregister? This deletes your profile and clears you from reports.", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif data == "mg_unreg_final":
+        unregister_user(user_id)
+        await query.message.edit_text("👋 You have been unregistered successfully. Bot keyboard removed.", reply_markup=None)
+        await context.bot.send_message(chat_id=chat_id, text="Profile deleted.", reply_markup=ReplyKeyboardRemove())
+
+    elif data == "mg_cancel_unreg":
+        await query.message.edit_text("Operation canceled.")
+
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
@@ -176,7 +199,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             msg = f"❌ {user_name} canceled -> {canceled_cat}"
         else:
             msg = f"⚠️ {user_name} -> No active task"
-            
         await context.bot.send_message(chat_id=chat_id, text=msg)
         return
 
@@ -216,16 +238,14 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data[f'batch_list_{user_id}'] = []
             
         context.user_data[f'batch_list_{user_id}'].append(text)
-        context.user_data[f'action_{user_id}'] = None  # قفل موقت تا زدن دکمه شیشه‌ای بعدی
+        context.user_data[f'action_{user_id}'] = None
         
         keyboard = [
             [InlineKeyboardButton("➕ Add Another One", callback_data="batch_continue")],
             [InlineKeyboardButton("✅ Save & Finish", callback_data="batch_finish")]
         ]
-        
         current_list = "\n".join([f"- {c}" for c in context.user_data[f'batch_list_{user_id}']])
         follow_up_text = f"📝 Current items to add:\n{current_list}\n\nWhat would you like to do next?"
-        
         if menu_msg_id:
             try: await context.bot.edit_message_text(chat_id=chat_id, message_id=menu_msg_id, text=follow_up_text, reply_markup=InlineKeyboardMarkup(keyboard))
             except Exception: pass
@@ -242,7 +262,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if menu_msg_id:
             try: await context.bot.edit_message_text(chat_id=chat_id, message_id=menu_msg_id, text=f"✏️ Renamed: {old_name} -> {text}")
             except Exception: pass
-            
         await sync_keyboards(context, user_id, chat_id, "🔄 Keyboard updated")
         return
 
@@ -255,8 +274,31 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = f"👤 {user_name} ➔ {text}"
         if prev_info:
             msg += f"\n\n⏱️ Prev: {prev_info['category']} ({prev_info['duration'] // 60}h {prev_info['duration'] % 60}m)"
-            
         await context.bot.send_message(chat_id=chat_id, text=msg)
+
+async def check_focus_reminders(context: ContextTypes.DEFAULT_TYPE):
+    tz = pytz.timezone("Europe/Rome")
+    now_local = datetime.now(tz)
+    
+    # محدودیت زمانی از ساعت ۷ صبح تا ساعت ۲۳:۵۹ شب
+    if now_local.hour < 7:
+        return
+
+    active_targets = get_all_users_with_reminders()
+    for target in active_targets:
+        u_id = target['user_id']
+        pvt_chat_id = target['chat_id'] # ارسال فقط به چت خصوصی کاربر ثبت شده
+        
+        current = get_current_session(u_id)
+        if current:
+            reminder_msg = f"🔔 هنوز به {current['category']} مشغولی؟"
+        else:
+            reminder_msg = "🔔 به چه مشغولی؟ یه کار مفید انجام بده."
+            
+        try:
+            await context.bot.send_message(chat_id=pvt_chat_id, text=reminder_msg)
+        except Exception as e:
+            logging.error(f"Could not send focus reminder to private chat {pvt_chat_id}: {e}")
 
 async def send_daily_reports(context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -292,17 +334,21 @@ def main():
     application = Application.builder().token(token).build()
     
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
+        try:
+            loop = asyncio.get_running_loop()
             asyncio.ensure_future(set_bot_commands(application))
-        else:
-            loop.run_until_complete(set_bot_commands(application))
+        except RuntimeError:
+            asyncio.run(set_bot_commands(application))
     except Exception as e:
         logging.error(f"Failed to set bot commands due to timeout: {e}")
     
-    from datetime import time
-    import pytz
-    application.job_queue.run_daily(send_daily_reports, time=time(hour=0, minute=0, second=0, tzinfo=pytz.timezone("Europe/Rome")))
+    tz_rome = pytz.timezone("Europe/Rome")
+    
+    # کرون جاب گزارش شبانه
+    application.job_queue.run_daily(send_daily_reports, time=time(hour=0, minute=0, second=0, tzinfo=tz_rome))
+    
+    # کرون جاب یادآور تمرکز ۱۵ دقیقه‌ای (تکرار متوالی کل روز - فیلتر ساعت ۷ صبح داخل تابع اعمال می‌شود)
+    application.job_queue.run_repeating(check_focus_reminders, interval=timedelta(minutes=15), first=time(hour=7, minute=0, second=0, tzinfo=tz_rome))
 
     application.add_handler(CommandHandler("register", register))
     application.add_handler(CommandHandler("start", register))
