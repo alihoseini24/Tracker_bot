@@ -34,7 +34,8 @@ def init_db():
             CREATE TABLE IF NOT EXISTS users (
                 user_id BIGINT PRIMARY KEY,
                 chat_id BIGINT,
-                user_name TEXT
+                user_name TEXT,
+                reminders_enabled BOOLEAN DEFAULT TRUE
             )
         ''')
         cursor.execute('''
@@ -43,6 +44,15 @@ def init_db():
                 group_chat_id BIGINT
             )
         ''')
+        
+        # بررسی و اضافه کردن ستون reminders_enabled اگر از قبل وجود نداشته باشد
+        cursor.execute("""
+            SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_NAME = 'users' AND COLUMN_NAME = 'reminders_enabled'
+        """)
+        if not cursor.fetchone():
+            cursor.execute("ALTER TABLE users ADD COLUMN reminders_enabled BOOLEAN DEFAULT TRUE")
+            
         conn.commit()
         cursor.close()
     finally:
@@ -59,6 +69,41 @@ def register_user(user_id, chat_id, user_name):
         ''', (user_id, chat_id, user_name))
         conn.commit()
         cursor.close()
+    finally:
+        conn.close()
+
+def unregister_user(user_id):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
+        cursor.execute("DELETE FROM user_groups WHERE user_id = %s", (user_id,))
+        cursor.execute("DELETE FROM categories WHERE user_id = %s", (user_id,))
+        conn.commit()
+        cursor.close()
+    finally:
+        conn.close()
+
+def toggle_reminders(user_id):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET reminders_enabled = NOT reminders_enabled WHERE user_id = %s RETURNING reminders_enabled", (user_id,))
+        row = cursor.fetchone()
+        conn.commit()
+        cursor.close()
+        return row['reminders_enabled'] if row else False
+    finally:
+        conn.close()
+
+def get_all_users_with_reminders():
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id, chat_id FROM users WHERE reminders_enabled = TRUE")
+        rows = cursor.fetchall()
+        cursor.close()
+        return [{"user_id": r['user_id'], "chat_id": r['chat_id']} for r in rows]
     finally:
         conn.close()
 
