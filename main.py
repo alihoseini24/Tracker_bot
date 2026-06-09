@@ -351,8 +351,18 @@ def main():
     # کرون جاب گزارش شبانه
     application.job_queue.run_daily(send_daily_reports, time=time(hour=0, minute=0, second=0, tzinfo=tz_rome))
     
-    # کرون جاب یادآور تمرکز ۱۵ دقیقه‌ای
-    application.job_queue.run_repeating(check_focus_reminders, interval=timedelta(minutes=15), first=time(hour=7, minute=0, second=0, tzinfo=tz_rome))
+     # محاسبه زمان رند بعدی برای شروع دقیق ربع ساعت‌ها (:۰۰, :۱۵, :۳۰, :۴۵)
+    now_rome = datetime.now(tz_rome)
+    minutes_to_next_quarter = 15 - (now_rome.minute % 15)
+    next_quarter_start = now_rome + timedelta(minutes=minutes_to_next_quarter)
+    next_quarter_start = next_quarter_start.replace(second=0, microsecond=0)
+
+    # کرون جاب یادآور تمرکز ۱۵ دقیقه‌ای کاملاً رند شده
+    application.job_queue.run_repeating(
+        check_focus_reminders, 
+        interval=timedelta(minutes=15), 
+        first=next_quarter_start.time()
+    )
 
     application.add_handler(CommandHandler("register", register))
     application.add_handler(CommandHandler("start", register))
