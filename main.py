@@ -280,7 +280,6 @@ async def check_focus_reminders(context: ContextTypes.DEFAULT_TYPE):
     tz = pytz.timezone("Europe/Rome")
     now_local = datetime.now(tz)
     
-    # محدودیت زمانی از ساعت ۷ صبح تا ساعت ۲۳:۵۹ شب
     if now_local.hour < 7:
         return
 
@@ -295,7 +294,6 @@ async def check_focus_reminders(context: ContextTypes.DEFAULT_TYPE):
             reminder_msg = "🔔 به چه مشغولی؟ یه کار مفید انجام بده."
             
         try:
-            # استفاده از u_id به جای chat_id تضمین می‌کند پیام فقط به پی‌وی شخص برود
             await context.bot.send_message(chat_id=u_id, text=reminder_msg)
         except Exception as e:
             logging.error(f"Could not send focus reminder to private chat {u_id}: {e}")
