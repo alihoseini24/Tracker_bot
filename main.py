@@ -277,27 +277,20 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=chat_id, text=msg)
 
 async def check_focus_reminders(context: ContextTypes.DEFAULT_TYPE):
-    tz = pytz.timezone("Europe/Rome")
-    now_local = datetime.now(tz)
-    
-    if now_local.hour < 7:
-        return
-
+    logging.info("--- CRON JOB STARTED ---")
     active_targets = get_all_users_with_reminders()
+    logging.info(f"Found targets: {active_targets}")
+    
     for target in active_targets:
         u_id = target['user_id']
+        logging.info(f"Attempting to send reminder to User ID: {u_id}")
         
-        current = get_current_session(u_id)
-        if current:
-            reminder_msg = f"🔔 هنوز به {current['category']} مشغولی؟"
-        else:
-            reminder_msg = "🔔 به چه مشغولی؟ یه کار مفید انجام بده."
-            
         try:
-            await context.bot.send_message(chat_id=u_id, text=reminder_msg)
+            sent_msg = await context.bot.send_message(chat_id=u_id, text="🎯 تست آنی یادآور تمرکز")
+            logging.info(f"SUCCESS: Message sent to {u_id}. Message ID is {sent_msg.message_id}")
         except Exception as e:
-            logging.error(f"Could not send focus reminder to private chat {u_id}: {e}")
-
+            logging.error(f"FAILED to send to {u_id}: {e}")
+          
 async def send_daily_reports(context: ContextTypes.DEFAULT_TYPE):
     try:
         conn = get_db_connection()
