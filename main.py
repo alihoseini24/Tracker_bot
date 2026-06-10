@@ -294,26 +294,28 @@ async def check_focus_reminders(context: ContextTypes.DEFAULT_TYPE):
         else:
             reminder_msg = "🔔 به چه مشغولی؟ یه کار مفید انجام بده."
             
-        # مدیریت کاملاً ایمن حافظه موقت برای جلوگیری از کرش لوپ
-        if not hasattr(context.application, 'bot_data'):
+        # مقداردهی اولیه دیکشنری‌ها در صورت عدم وجود
+        if not hasattr(context.application, 'bot_data') or context.application.bot_data is None:
             context.application.bot_data = {}
             
         if 'focus_reminders' not in context.application.bot_data:
             context.application.bot_data['focus_reminders'] = {}
             
-        # ۱. حذف یادآور قبلی (اگر وجود داشت)
+        # حذف پیام قبلی فقط در صورت وجود آیدی معتبر و بزرگتر از صفر
         last_remind_id = context.application.bot_data['focus_reminders'].get(u_id)
-        if last_remind_id:
+        if last_remind_id and isinstance(last_remind_id, int) and last_remind_id > 0:
             try:
                 await context.bot.delete_message(chat_id=u_id, message_id=last_remind_id)
             except Exception:
                 pass 
+            # صفر کردن آیدی بعد از حذف برای جلوگیری از تداخل
+            context.application.bot_data['focus_reminders'][u_id] = None
                 
         try:
-            # ۲. ارسال یادآور جدید
+            # ارسال یادآور جدید
             sent_msg = await context.bot.send_message(chat_id=u_id, text=reminder_msg)
             
-            # ۳. ذخیره آیدی پیام جدید در bot_data (مخصوص داده‌های سراسری ربات)
+            # ذخیره آیدی پیام جدید
             context.application.bot_data['focus_reminders'][u_id] = sent_msg.message_id
             
         except Exception as e:
