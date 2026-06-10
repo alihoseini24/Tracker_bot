@@ -294,22 +294,27 @@ async def check_focus_reminders(context: ContextTypes.DEFAULT_TYPE):
         else:
             reminder_msg = "🔔 به چه مشغولی؟ یه کار مفید انجام بده."
             
-        # ۱. حذف یادآور قبلی در صورت وجود برای خلوت ماندن چت
-        last_remind_id = context.application.user_data.get(u_id, {}).get('last_reminder_msg_id')
+        # مدیریت کاملاً ایمن حافظه موقت برای جلوگیری از کرش لوپ
+        if not hasattr(context.application, 'bot_data'):
+            context.application.bot_data = {}
+            
+        if 'focus_reminders' not in context.application.bot_data:
+            context.application.bot_data['focus_reminders'] = {}
+            
+        # ۱. حذف یادآور قبلی (اگر وجود داشت)
+        last_remind_id = context.application.bot_data['focus_reminders'].get(u_id)
         if last_remind_id:
             try:
                 await context.bot.delete_message(chat_id=u_id, message_id=last_remind_id)
             except Exception:
-                pass # اگر کاربر خودش پیام را پاک کرده باشد، از خطا چشم‌پوشی می‌شود
+                pass 
                 
         try:
             # ۲. ارسال یادآور جدید
             sent_msg = await context.bot.send_message(chat_id=u_id, text=reminder_msg)
             
-            # ۳. ذخیره آیدی پیام جدید در حافظه موقت ربات
-            if u_id not in context.application.user_data:
-                context.application.user_data[u_id] = {}
-            context.application.user_data[u_id]['last_reminder_msg_id'] = sent_msg.message_id
+            # ۳. ذخیره آیدی پیام جدید در bot_data (مخصوص داده‌های سراسری ربات)
+            context.application.bot_data['focus_reminders'][u_id] = sent_msg.message_id
             
         except Exception as e:
             logging.error(f"Could not send focus reminder to private chat {u_id}: {e}")
