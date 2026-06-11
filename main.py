@@ -1,6 +1,3 @@
-برای قرار دادن دکمهٔ منو به صورت مستقیم و دائمی در پایین صفحه چت، از متد داخلی ربات استفاده می‌کنیم. بهترین جا برای اجرای این دستور، دقیقاً بعد از ثبت دستورات متنی منو در تابع main است تا سیستم تداخلی با لوپ نداشته باشد.
-همچنین برای حل ارور Button_url_invalid که در لاگ قبلی داشتی، آدرس گیت‌هاب را به صورت یک متغیر مشخص در بالای کد قرار می‌دهیم تا مدیریت آن راحت‌تر باشد.
-کد زیر نسخهٔ کامل و اصلاح‌شدهٔ فایل main.py شماست. آدرس گیت‌هاب خودت را در خط ۲۱ جایگزین کن و کل این کد را در main.py بریز:
 import os
 import logging
 import asyncio
@@ -22,7 +19,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 last_group_sync_msgs = {}
 
 # 🌐 آدرس پایه مینی‌اپ شما (اینجا را با آدرس دقیق خودت جایگزین کن)
-BASE_WEBAPP_URL = "https://alihoseini24.github.io/Tracker_bot/"
+BASE_WEBAPP_URL = "https://yourusername.github.io/your-repo/"
 
 def get_tracker_keyboard(user_id):
     categories = get_categories(user_id) 
