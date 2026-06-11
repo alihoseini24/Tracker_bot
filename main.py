@@ -1,11 +1,16 @@
+برای قرار دادن دکمهٔ منو به صورت مستقیم و دائمی در پایین صفحه چت، از متد داخلی ربات استفاده می‌کنیم. بهترین جا برای اجرای این دستور، دقیقاً بعد از ثبت دستورات متنی منو در تابع main است تا سیستم تداخلی با لوپ نداشته باشد.
+همچنین برای حل ارور Button_url_invalid که در لاگ قبلی داشتی، آدرس گیت‌هاب را به صورت یک متغیر مشخص در بالای کد قرار می‌دهیم تا مدیریت آن راحت‌تر باشد.
+کد زیر نسخهٔ کامل و اصلاح‌شدهٔ فایل main.py شماست. آدرس گیت‌هاب خودت را در خط ۲۱ جایگزین کن و کل این کد را در main.py بریز:
 import os
 import logging
 import asyncio
 import pytz
+import urllib.parse
+import json
 from datetime import time, datetime, timedelta
 from threading import Thread
 from http.server import SimpleHTTPRequestHandler, HTTPServer
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand, ReplyKeyboardRemove
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand, ReplyKeyboardRemove, MenuButtonWebApp
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, CallbackQueryHandler, filters
 from database import (init_db, register_user, unregister_user, toggle_reminders, get_all_users_with_reminders,
                       register_group, get_categories, add_batch_categories, delete_category, rename_category, 
@@ -16,29 +21,35 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 last_group_sync_msgs = {}
 
+# 🌐 آدرس پایه مینی‌اپ شما (اینجا را با آدرس دقیق خودت جایگزین کن)
+BASE_WEBAPP_URL = "https://alihoseini24.github.io/Tracker_bot/"
+
 def get_tracker_keyboard(user_id):
-    categories = get_categories(user_id)
+    categories = get_categories(user_id) 
+    current = get_current_session(user_id) 
+    
+    active_cat = current['category'] if current else "هیچ تسکی فعال نیست"
+    active_duration = current['duration'] if current else 0 
+    
+    params = {
+        "categories": ",".join(categories),
+        "active_cat": active_cat,
+        "duration": active_duration
+    }
+    encoded_params = urllib.parse.urlencode(params)
+    web_app_url = f"{BASE_WEBAPP_URL}?{encoded_params}"
+    
     keyboard = []
+    keyboard.append([KeyboardButton(text="🌐 باز کردن پنل گرافیکی", web_app=WebAppInfo(url=web_app_url))])
     
-    # 🌐 اضافه کردن دکمه وب‌اپلیکیشن گرافیکی در بالاترین ردیف
-    keyboard.append([
-        KeyboardButton(
-            text="🌐 باز کردن پنل گرافیکی", 
-            web_app=WebAppInfo(url="https://alihoseini24.github.io/Tracker_bot/")
-        )
-    ])
-    
-    # چیدمان دکمه‌های دسته‌بندی قدیمی تو
     for i in range(0, len(categories), 2):
         row = [KeyboardButton(categories[i])]
         if i + 1 < len(categories):
             row.append(KeyboardButton(categories[i+1]))
         keyboard.append(row)
     
-    # بقیه دکمه‌های کنترلی تو
     keyboard.append([KeyboardButton("⏱️ Current Session"), KeyboardButton("📊 Day Report")])
     keyboard.append([KeyboardButton("❌ Cancel Task"), KeyboardButton("⚙️ Manage")])
-    
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 
@@ -62,8 +73,17 @@ async def set_bot_commands(application: Application):
     ]
     try:
         await application.bot.set_my_commands(commands)
+        
+        # 🌐 تنظیم دکمهٔ دائمی پایین چت (Menu Button) کنار کادر متن
+        await application.bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(
+                text="🌐 پنل گرافیکی",
+                web_app=WebAppInfo(url=BASE_WEBAPP_URL)
+            )
+        )
+        logging.info("Bot commands and Menu Button set successfully.")
     except Exception as e:
-        logging.error(f"Failed to set commands natively: {e}")
+        logging.error(f"Failed to set commands or menu button natively: {e}")
 
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -192,7 +212,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "mg_cancel_unreg":
         await query.message.edit_text("Operation canceled.")
 
-import json
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -200,7 +219,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = update.effective_user.first_name
     context.user_data['user_name'] = user_name
     
-    # 🌐 ۱. بخش جدید: شکار دیتای ارسالی از مینی‌اپ
     if update.message and update.message.web_app_data:
         raw_data = update.message.web_app_data.data
         data = json.loads(raw_data)
@@ -215,14 +233,13 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(chat_id=chat_id, text=msg)
             
         elif action == "toggle_reminder":
-            status = data.get("status") # True یا False
-            # 💡 اینجا تابع سوپابیس خودت برای آپدیت وضعیت ریماندر این کاربر را صدا بزن
-            # مثلاً: update_user_reminder_status(user_id, status)
+            status = data.get("status")
+            toggle_reminders(user_id) # همگام با دیتابیس تو
             status_text = "فعال" if status else "غیرفعال"
             await context.bot.send_message(chat_id=chat_id, text=f"⚙️ یادآور ۱۵ دقیقه‌ای برای شما {status_text} شد.")
             
         elif action == "stop_session":
-            canceled_cat = cancel_active_activity(user_id) # یا هر تابعی که تسک را می‌بندد
+            canceled_cat = cancel_active_activity(user_id)
             if canceled_cat:
                 msg = f"❌ {user_name} تسک جاری را متوقف کرد -> {canceled_cat}"
             else:
@@ -232,14 +249,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif action == "open_manage_menu":
             await manage_menu(update, context)
             
-        return # پایان اجرای تابع برای دیتای وب‌اپ
+        return
 
-    # ایمن‌سازی متغیر متن برای پیام‌های عادی
     if not update.message or not update.message.text:
         return
     text = update.message.text.strip()
     
-    # 🟢 ۲. بخش قدیمی: بقیه کدهای خودت بدون تغییر از اینجا ادامه پیدا می‌کنند
     if text == "⚙️ Manage" or text == "/manage":
         await manage_menu(update, context)
         return
@@ -294,7 +309,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data[f'batch_list_{user_id}'].append(text)
         context.user_data[f'action_{user_id}'] = None
         
-        from telegram import InlineKeyboardButton, InlineKeyboardMarkup # اگر قبلا ایمپورت نکردی
         keyboard = [
             [InlineKeyboardButton("➕ Add Another One", callback_data="batch_continue")],
             [InlineKeyboardButton("✅ Save & Finish", callback_data="batch_finish")]
@@ -330,6 +344,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if prev_info:
             msg += f"\n\n⏱️ Prev: {prev_info['category']} ({prev_info['duration'] // 60}h {prev_info['duration'] % 60}m)"
         await context.bot.send_message(chat_id=chat_id, text=msg)
+
 async def check_focus_reminders(context: ContextTypes.DEFAULT_TYPE):
     tz = pytz.timezone("Europe/Rome")
     now_local = datetime.now(tz)
@@ -386,7 +401,6 @@ def main():
     
     application = Application.builder().token(token).build()
     
-    # تنظیم دستورات منو بدون بستن لوپ اصلی با استفاده از لوپ داخلی خود ربات
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
@@ -399,17 +413,13 @@ def main():
         logging.error(f"Failed to set bot commands: {e}")
     
     tz_rome = pytz.timezone("Europe/Rome")
-    
-    # کرون جاب گزارش شبانه
     application.job_queue.run_daily(send_daily_reports, time=time(hour=0, minute=0, second=0, tzinfo=tz_rome))
     
-     # محاسبه زمان رند بعدی برای شروع دقیق ربع ساعت‌ها (:۰۰, :۱۵, :۳۰, :۴۵)
     now_rome = datetime.now(tz_rome)
     minutes_to_next_quarter = 15 - (now_rome.minute % 15)
     next_quarter_start = now_rome + timedelta(minutes=minutes_to_next_quarter)
     next_quarter_start = next_quarter_start.replace(second=0, microsecond=0)
 
-    # کرون جاب یادآور تمرکز ۱۵ دقیقه‌ای کاملاً رند شده
     application.job_queue.run_repeating(
         check_focus_reminders, 
         interval=timedelta(minutes=15), 
