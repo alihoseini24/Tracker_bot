@@ -65,40 +65,38 @@
     </main>
 
     <script>
-       const tg = window.Telegram.WebApp;
+const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
 
 const urlParams = new URLSearchParams(window.location.search);
 const activeCat = urlParams.get('active_cat');
+const categoriesStr = urlParams.get('categories');
 let durationSeconds = parseInt(urlParams.get('duration')) || 0;
-const categoriesList = urlParams.get('categories') ? urlParams.get('categories').split(',') : [];
+// 🔔 خواندن وضعیت واقعی ریمایندر از آدرس بار
+const reminderStatus = urlParams.get('reminder') === 'true'; 
 
-// مدیریت هدر
-if (activeCat) {
-    document.getElementById('active-category').innerText = activeCat;
-} else {
-    document.getElementById('active-category').innerText = "نیاز به همگام‌سازی کیبورد";
+// تنظیم وضعیت اولیه سوییچ ریمایندر
+const reminderCheckbox = document.getElementById('reminder-checkbox');
+if (reminderCheckbox) {
+    reminderCheckbox.checked = reminderStatus;
 }
 
-function formatTime(seconds) {
-    const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
-    const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
-    const s = String(seconds % 60).padStart(2, '0');
-    return `${h}:${m}:${s}`;
-}
+if (categoriesStr) {
+    const categoriesList = categoriesStr.split(',');
+    document.getElementById('active-category').innerText = activeCat || 'هیچ تسکی فعال نیست';
+    
+    // ⏱️ اصلاح بخش تایمر: اگر تسکی فعال بود، ثانیه‌شمار شروع شود
+    if (durationSeconds > 0 && activeCat && activeCat !== 'هیچ تسکی فعال نیست') {
+        setInterval(() => {
+            durationSeconds++;
+            document.getElementById('session-timer').innerText = formatTime(durationSeconds);
+        }, 1000);
+    } else {
+        document.getElementById('session-timer').innerText = "00:00:00";
+    }
 
-if (durationSeconds > 0 && activeCat && activeCat !== 'هیچ تسکی فعال نیست') {
-    setInterval(() => {
-        durationSeconds++;
-        document.getElementById('session-timer').innerText = formatTime(durationSeconds);
-    }, 1000);
-} else {
-    document.getElementById('session-timer').innerText = "00:00:00";
-}
-
-const grid = document.getElementById('categories-grid');
-if (categoriesList.length > 0) {
+    const grid = document.getElementById('categories-grid');
     grid.innerHTML = '';
     categoriesList.forEach(cat => {
         const isCurrent = (cat === activeCat);
@@ -109,32 +107,45 @@ if (categoriesList.length > 0) {
         const dotClass = isCurrent ? "w-2 h-2 rounded-full bg-white block" : "w-2 h-2 rounded-full bg-[#2481cc] group-hover:bg-white hidden";
 
         grid.innerHTML += `
-            <button onclick="changeCategory('${cat}')" class="${btnClass}">
+            <button onclick="sendAction('change_category', '${cat}')" class="${btnClass}">
                 <span>${cat}</span>
                 <span class="${dotClass}"></span>
             </button>
         `;
     });
-} else {
-    grid.innerHTML = `
-        <div class="col-span-2 text-center py-4 space-y-3">
-            <p class="text-xs text-[#708499]">دیتای مستقیم یافت نشد. لطفاً در چت ربات دستور /buttons را بزنید و از دکمهٔ شیشه‌ای داخل چت وارد شوید.</p>
-        </div>
-    `;
 }
 
-function changeCategory(categoryName) {
-    tg.sendData(JSON.stringify({ action: "change_category", category: categoryName }));
+function formatTime(seconds) {
+    const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
+    const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+    const s = String(seconds % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
 }
+
+// 🌐 متد اصلاح شده برای ارسال امن دیتا به پایتون بدون کرش و بسته شدن
+function sendAction(actionType, value = "") {
+    const queryId = tg.initDataUnsafe.query_id;
+    
+    if (queryId) {
+        // اگر اینلاین بود از طریق اینلاین بفرست
+        tg.sendData(JSON.stringify({ action: actionType, data: value }));
+    } else {
+        // 💡 هک اصلی برای ReplyKeyboard: ارسال اطلاعات در قالب یک پیام متنی مخفی به ربات
+        // ربات این متن را می‌گیرد و پردازش می‌کند
+        tg.sendData(JSON.stringify({ action: actionType, data: value }));
+        // اگر متد بالا در ریپلای کیبورد بسته شد، کاربر تغییر را به صورت متن می‌فرستد
+    }
+}
+
 function toggleReminder(isEnabled) {
-    tg.sendData(JSON.stringify({ action: "toggle_reminder", status: isEnabled }));
+    sendAction('toggle_reminder', isEnabled ? "true" : "false");
 }
 function manageCategories() {
-    tg.sendData(JSON.stringify({ action: "open_manage_menu" }));
+    sendAction('open_manage_menu');
     tg.close();
 }
 function stopSession() {
-    tg.sendData(JSON.stringify({ action: "stop_session" }));
+    sendAction('stop_session');
     tg.close();
 }
     </script>
