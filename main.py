@@ -31,7 +31,7 @@ def get_tracker_keyboard(user_id):
     params = {
         "categories": ",".join(categories),
         "active_cat": active_cat,
-        "duration": active_duration
+        "duration": active_duration,
         "_v": datetime.now().timestamp()
     }
     encoded_params = urllib.parse.urlencode(params)
