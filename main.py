@@ -5,6 +5,7 @@ import pytz
 from datetime import time, datetime, timedelta
 from threading import Thread
 from http.server import SimpleHTTPRequestHandler, HTTPServer
+from telegram.constants import ChatButtonType
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand, ReplyKeyboardRemove
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, CallbackQueryHandler, filters
 from database import (init_db, register_user, unregister_user, toggle_reminders, get_all_users_with_reminders,
@@ -28,6 +29,13 @@ def get_tracker_keyboard(user_id):
     keyboard.append([KeyboardButton("⏱️ Current Session"), KeyboardButton("📊 Day Report")])
     keyboard.append([KeyboardButton("❌ Cancel Task"), KeyboardButton("⚙️ Manage")])
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+
+
+async def remove_menu_button(application):
+    # تنظیم مجدد دکمه منو به حالت پیش‌فرض (خالی کردن وب‌آپ)
+    await application.bot.set_chat_menu_button(menu_button={"type": ChatButtonType.DEFAULT})
+    print("دکمه پنل گرافیکی با موفقیت حذف شد.")
 
 def get_user_group_id(user_id):
     try:
