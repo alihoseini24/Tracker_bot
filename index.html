@@ -1,24 +1,22 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Focus Tracker App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-    body { 
-        font-family: 'Vazirmatn', system-ui, -apple-system, sans-serif; 
-    }
-    /* برای اینکه اعداد تایمر هدر همچنان مونوپیس و تراز بمانند */
-    .font-mono {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    }
-</style>
+        body { 
+            font-family: 'Vazirmatn', system-ui, -apple-system, sans-serif; 
+        }
+        .font-mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+    </style>
 </head>
 <body class="bg-[#17212b] text-[#f5f5f5] min-h-screen flex flex-col antialiased selection:bg-[#2481cc]">
 
@@ -26,17 +24,16 @@
         <div class="max-w-md mx-auto flex justify-between items-center">
             <div>
                 <p class="text-xs text-[#708499] uppercase tracking-wider font-semibold">تسک فعال فعلی</p>
-                <h1 id="active-category" class="text-lg font-bold text-[#2481cc] mt-0.5">📚 در حال مطالعه</h1>
+                <h1 id="active-category" class="text-lg font-bold text-[#2481cc] mt-0.5">در حال بارگذاری...</h1>
             </div>
             <div class="text-right">
                 <p class="text-xs text-[#708499] font-semibold">مدت زمان</p>
-                <div id="session-timer" class="text-xl font-mono font-bold text-[#64b5f6] tracking-wider mt-0.5">00:45:12</div>
+                <div id="session-timer" class="text-xl font-mono font-bold text-[#64b5f6] tracking-wider mt-0.5">00:00:00</div>
             </div>
         </div>
     </header>
 
     <main class="flex-1 max-w-md w-full mx-auto p-4 space-y-6 pb-24">
-
         <section class="bg-[#242f3d] rounded-2xl p-4 shadow-sm border border-[#2f3e50]">
             <div class="flex justify-between items-center mb-3">
                 <h2 class="text-sm font-bold text-[#708499]">تغییر سریع دسته‌بندی</h2>
@@ -46,138 +43,91 @@
             </div>
             
             <div class="grid grid-cols-2 gap-2" id="categories-grid">
-                <button onclick="changeCategory('📚 مطالعه')" class="p-3 rounded-xl bg-[#2b394a] hover:bg-[#2481cc] transition-all text-sm font-medium text-right flex items-center justify-between group border-0 cursor-pointer">
-                    <span>📚 مطالعه</span>
-                    <span class="w-2 h-2 rounded-full bg-[#2481cc] group-hover:bg-white hidden" id="dot-مطالعه"></span>
-                </button>
-                <button onclick="changeCategory('💻 برنامه‌نویسی')" class="p-3 rounded-xl bg-[#2481cc] transition-all text-sm font-medium text-right flex items-center justify-between group border-0 cursor-pointer">
-                    <span>💻 برنامه‌نویسی</span>
-                    <span class="w-2 h-2 rounded-full bg-white block" id="dot-برنامه‌نویسی"></span>
-                </button>
-                <button onclick="changeCategory('🏋️ ورزش')" class="p-3 rounded-xl bg-[#2b394a] hover:bg-[#2481cc] transition-all text-sm font-medium text-right flex items-center justify-between group border-0 cursor-pointer">
-                    <span>🏋️ ورزش</span>
-                    <span class="w-2 h-2 rounded-full bg-[#2481cc] group-hover:bg-white hidden" id="dot-ورزش"></span>
-                </button>
-                <button onclick="changeCategory('🛑 استراحت')" class="p-3 rounded-xl bg-[#2b394a] hover:bg-[#2481cc] transition-all text-sm font-medium text-right flex items-center justify-between group border-0 cursor-pointer">
-                    <span>🛑 استراحت</span>
-                    <span class="w-2 h-2 rounded-full bg-[#2481cc] group-hover:bg-white hidden" id="dot-استراحت"></span>
-                </button>
-            </div>
+                </div>
         </section>
 
-        <section class="bg-[#242f3d] rounded-2xl p-4 shadow-sm border border-[#2f3e50]">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-sm font-bold text-[#708499]">گزارش عملکرد</h2>
-                
-                <div class="flex bg-[#17212b] p-1 rounded-xl border border-[#2b394a]">
-                    <button onclick="switchReport('day')" id="tab-day" class="px-3 py-1 text-xs font-semibold rounded-lg bg-[#2481cc] text-white transition-all border-0 cursor-pointer">روز</button>
-                    <button onclick="switchReport('week')" id="tab-week" class="px-3 py-1 text-xs font-semibold rounded-lg text-[#708499] hover:text-white transition-all border-0 cursor-pointer">هفته</button>
-                    <button onclick="switchReport('month')" id="tab-month" class="px-3 py-1 text-xs font-semibold rounded-lg text-[#708499] hover:text-white transition-all border-0 cursor-pointer">ماه</button>
-                </div>
-            </div>
-
-            <div class="space-y-3" id="report-container">
-                <div class="flex justify-between items-center p-2 rounded-lg bg-[#1c2734]">
-                    <span class="text-sm">💻 برنامه‌نویسی</span>
-                    <span class="font-mono text-sm font-bold text-[#64b5f6]">۴ ساعت و ۲۰ دقیقه</span>
-                </div>
-                <div class="flex justify-between items-center p-2 rounded-lg bg-[#1c2734]">
-                    <span class="text-sm">📚 مطالعه</span>
-                    <span class="font-mono text-sm font-bold text-[#64b5f6]">۲ ساعت و ۱۵ دقیقه</span>
-                </div>
-            </div>
-        </section>
-
-        <section class="bg-[#242f3d] rounded-2xl p-4 shadow-sm border border-[#2f3e50] flex justify-between items-center">
-            <div>
-                <h3 class="text-sm font-bold">یادآور تمرکز ۱۵ دقیقه‌ای</h3>
-                <p class="text-xs text-[#708499] mt-0.5">ارسال هشدار در صورت عدم فعالیت یا طولانی شدن تسک</p>
-            </div>
+        <section class="space-y-3">
+            <button onclick="stopSession()" class="w-full p-4 bg-[#e53935] hover:bg-[#d32f2f] text-white rounded-xl font-bold transition-all border-0 cursor-pointer shadow-sm">
+                🛑 متوقف کردن تسک جاری
+            </button>
             
-            <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="reminder-toggle" onchange="toggleReminder(this.checked)" class="sr-only peer" checked>
-                <div class="w-11 h-6 bg-[#17212b] rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2481cc] border border-[#2b394a]"></div>
-            </label>
+            <div class="bg-[#242f3d] rounded-2xl p-4 flex justify-between items-center border border-[#2f3e50]">
+                <div>
+                    <p class="text-sm font-bold">🔔 یادآور ربع ساعتی</p>
+                    <p class="text-xs text-[#708499] mt-0.5">ارسال آلارم تمرکز در صورت بی‌کار بودن</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="reminder-checkbox" onchange="toggleReminder(this.checked)" class="sr-only peer">
+                    <div class="w-11 h-6 bg-[#2b394a] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2481cc]"></div>
+                </label>
+            </div>
         </section>
-
     </main>
 
-    <div class="fixed bottom-0 left-0 right-0 p-4 bg-[#0e1621] border-t border-[#242f3d] flex justify-center z-50">
-        <div class="max-w-md w-full flex gap-3">
-            <button onclick="stopSession()" class="flex-1 bg-[#d32f2f] hover:bg-[#b71c1c] text-white py-3 rounded-xl font-bold text-sm transition-all shadow-md border-0 cursor-pointer">
-                🛑 توقف و ثبت تسک
-            </button>
-        </div>
-    </div>
-
     <script>
-// Initialize Telegram Web App API
-const tg = window.Telegram.WebApp;
-tg.ready();
-tg.expand();
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
 
-// 🟢 دریافت دیتای واقعی دیتابیس از آدرس صفحه (URL)
-const urlParams = new URLSearchParams(window.location.search);
-const activeCat = urlParams.get('active_cat') || 'هیچ تسکی فعال نیست';
-let durationSeconds = parseInt(urlParams.get('duration')) || 0;
-const categoriesList = urlParams.get('categories') ? urlParams.get('categories').split(',') : [];
+        const urlParams = new URLSearchParams(window.location.search);
+        const activeCat = urlParams.get('active_cat') || 'هیچ تسکی فعال نیست';
+        let durationSeconds = parseInt(urlParams.get('duration')) || 0;
+        const categoriesList = urlParams.get('categories') ? urlParams.get('categories').split(',') : [];
 
-// ۱. آپدیت هدر (تسک فعال واقعی)
-document.getElementById('active-category').innerText = activeCat;
+        document.getElementById('active-category').innerText = activeCat;
 
-// ۲. راه‌اندازی تایمر واقعی زنده
-function formatTime(seconds) {
-    const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
-    const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
-    const s = String(seconds % 60).padStart(2, '0');
-    return `${h}:${m}:${s}`;
-}
+        function formatTime(seconds) {
+            const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
+            const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+            const s = String(seconds % 60).padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
 
-if (durationSeconds > 0) {
-    setInterval(() => {
-        durationSeconds++;
-        document.getElementById('session-timer').innerText = formatTime(durationSeconds);
-    }, 1000);
-} else {
-    document.getElementById('session-timer').innerText = "00:00:00";
-}
+        if (durationSeconds > 0 && activeCat !== 'هیچ تسکی فعال نیست') {
+            setInterval(() => {
+                durationSeconds++;
+                document.getElementById('session-timer').innerText = formatTime(durationSeconds);
+            }, 1000);
+        } else {
+            document.getElementById('session-timer').innerText = "00:00:00";
+        }
 
-// ۳. رندر کردن دسته‌بندی‌های واقعی کاربر در صفحه
-const grid = document.getElementById('categories-grid');
-if (categoriesList.length > 0) {
-    grid.innerHTML = ''; // پاک کردن دکمه‌های پیش‌فرض قدیمی
-    categoriesList.forEach(cat => {
-        const isCurrent = (cat === activeCat);
-        const btnClass = isCurrent 
-            ? "p-3 rounded-xl bg-[#2481cc] transition-all text-sm font-medium text-right flex items-center justify-between border-0 cursor-pointer"
-            : "p-3 rounded-xl bg-[#2b394a] hover:bg-[#2481cc] transition-all text-sm font-medium text-right flex items-center justify-between group border-0 cursor-pointer";
-        
-        const dotClass = isCurrent ? "w-2 h-2 rounded-full bg-white block" : "w-2 h-2 rounded-full bg-[#2481cc] group-hover:bg-white hidden";
+        const grid = document.getElementById('categories-grid');
+        if (categoriesList.length > 0) {
+            grid.innerHTML = '';
+            categoriesList.forEach(cat => {
+                const isCurrent = (cat === activeCat);
+                const btnClass = isCurrent 
+                    ? "p-3 rounded-xl bg-[#2481cc] transition-all text-sm font-medium text-right flex items-center justify-between border-0 cursor-pointer w-full"
+                    : "p-3 rounded-xl bg-[#2b394a] hover:bg-[#2481cc] transition-all text-sm font-medium text-right flex items-center justify-between group border-0 cursor-pointer w-full";
+                
+                const dotClass = isCurrent ? "w-2 h-2 rounded-full bg-white block" : "w-2 h-2 rounded-full bg-[#2481cc] group-hover:bg-white hidden";
 
-        grid.innerHTML += `
-            <button onclick="changeCategory('${cat}')" class="${btnClass}">
-                <span>${cat}</span>
-                <span class="${dotClass}"></span>
-            </button>
-        `;
-    });
-}
+                grid.innerHTML += `
+                    <button onclick="changeCategory('${cat}')" class="${btnClass}">
+                        <span>${cat}</span>
+                        <span class="${dotClass}"></span>
+                    </button>
+                `;
+            });
+        } else {
+            grid.innerHTML = '<p class="text-xs text-[#708499] col-span-2 text-center">دسته‌بندی یافت نشد. از منوی مدیریت استفاده کنید.</p>';
+        }
 
-// بقیه توابع ارسال دیتا به ربات (بدون تغییر)
-function changeCategory(categoryName) {
-    tg.sendData(JSON.stringify({ action: "change_category", category: categoryName }));
-}
-function toggleReminder(isEnabled) {
-    tg.sendData(JSON.stringify({ action: "toggle_reminder", status: isEnabled }));
-}
-function manageCategories() {
-    tg.sendData(JSON.stringify({ action: "open_manage_menu" }));
-    tg.close();
-}
-function stopSession() {
-    tg.sendData(JSON.stringify({ action: "stop_session" }));
-    tg.close();
-}
+        function changeCategory(categoryName) {
+            tg.sendData(JSON.stringify({ action: "change_category", category: categoryName }));
+        }
+        function toggleReminder(isEnabled) {
+            tg.sendData(JSON.stringify({ action: "toggle_reminder", status: isEnabled }));
+        }
+        function manageCategories() {
+            tg.sendData(JSON.stringify({ action: "open_manage_menu" }));
+            tg.close();
+        }
+        function stopSession() {
+            tg.sendData(JSON.stringify({ action: "stop_session" }));
+            tg.close();
+        }
     </script>
 </body>
 </html>
