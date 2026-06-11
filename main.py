@@ -32,7 +32,7 @@ def get_tracker_keyboard(user_id):
         "categories": ",".join(categories),
         "active_cat": active_cat,
         "duration": active_duration
-        "_v": datetime.now().timestamp()  # 💡 این خط باعث لود آنی نسخه جدید در تلگرام می‌شود
+        "_v": datetime.now().timestamp()
     }
     encoded_params = urllib.parse.urlencode(params)
     web_app_url = f"{BASE_WEBAPP_URL}?{encoded_params}"
