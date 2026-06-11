@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Tracker App</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; }
+    </style>
+</head>
+<body class="bg-[#17212b] text-[#f5f5f5] min-h-screen flex flex-col antialiased selection:bg-[#2481cc]">
+
+    <header class="sticky top-0 bg-[#0e1621] border-b border-[#242f3d] p-4 z-50 shadow-md">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <div>
+                <p class="text-xs text-[#708499] uppercase tracking-wider font-semibold">تسک فعال فعلی</p>
+                <h1 id="active-category" class="text-lg font-bold text-[#2481cc] mt-0.5">📚 در حال مطالعه</h1>
+            </div>
+            <div class="text-right">
+                <p class="text-xs text-[#708499] font-semibold">مدت زمان</p>
+                <div id="session-timer" class="text-xl font-mono font-bold text-[#64b5f6] tracking-wider mt-0.5">00:45:12</div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-md w-full mx-auto p-4 space-y-6 pb-24">
+
+        <section class="bg-[#242f3d] rounded-2xl p-4 shadow-sm border border-[#2f3e50]">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-sm font-bold text-[#708499]">تغییر سریع دسته‌بندی</h2>
+                <button onclick="manageCategories()" class="text-xs font-medium text-[#2481cc] hover:underline bg-transparent border-0 cursor-pointer">
+                    ⚙️ مدیریت دسته‌ها
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2" id="categories-grid">
+                <button onclick="changeCategory('📚 مطالعه')" class="p-3 rounded-xl bg-[#2b394a] hover:bg-[#2481cc] transition-all text-sm font-medium text-right flex items-center justify-between group border-0 cursor-pointer">
+                    <span>📚 مطالعه</span>
+                    <span class="w-2 h-2 rounded-full bg-[#2481cc] group-hover:bg-white hidden" id="dot-مطالعه"></span>
+                </button>
+                <button onclick="changeCategory('💻 برنامه‌نویسی')" class="p-3 rounded-xl bg-[#2481cc] transition-all text-sm font-medium text-right flex items-center justify-between group border-0 cursor-pointer">
+                    <span>💻 برنامه‌نویسی</span>
+                    <span class="w-2 h-2 rounded-full bg-white block" id="dot-برنامه‌نویسی"></span>
+                </button>
+                <button onclick="changeCategory('🏋️ ورزش')" class="p-3 rounded-xl bg-[#2b394a] hover:bg-[#2481cc] transition-all text-sm font-medium text-right flex items-center justify-between group border-0 cursor-pointer">
+                    <span>🏋️ ورزش</span>
+                    <span class="w-2 h-2 rounded-full bg-[#2481cc] group-hover:bg-white hidden" id="dot-ورزش"></span>
+                </button>
+                <button onclick="changeCategory('🛑 استراحت')" class="p-3 rounded-xl bg-[#2b394a] hover:bg-[#2481cc] transition-all text-sm font-medium text-right flex items-center justify-between group border-0 cursor-pointer">
+                    <span>🛑 استراحت</span>
+                    <span class="w-2 h-2 rounded-full bg-[#2481cc] group-hover:bg-white hidden" id="dot-استراحت"></span>
+                </button>
+            </div>
+        </section>
+
+        <section class="bg-[#242f3d] rounded-2xl p-4 shadow-sm border border-[#2f3e50]">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-sm font-bold text-[#708499]">گزارش عملکرد</h2>
+                
+                <div class="flex bg-[#17212b] p-1 rounded-xl border border-[#2b394a]">
+                    <button onclick="switchReport('day')" id="tab-day" class="px-3 py-1 text-xs font-semibold rounded-lg bg-[#2481cc] text-white transition-all border-0 cursor-pointer">روز</button>
+                    <button onclick="switchReport('week')" id="tab-week" class="px-3 py-1 text-xs font-semibold rounded-lg text-[#708499] hover:text-white transition-all border-0 cursor-pointer">هفته</button>
+                    <button onclick="switchReport('month')" id="tab-month" class="px-3 py-1 text-xs font-semibold rounded-lg text-[#708499] hover:text-white transition-all border-0 cursor-pointer">ماه</button>
+                </div>
+            </div>
+
+            <div class="space-y-3" id="report-container">
+                <div class="flex justify-between items-center p-2 rounded-lg bg-[#1c2734]">
+                    <span class="text-sm">💻 برنامه‌نویسی</span>
+                    <span class="font-mono text-sm font-bold text-[#64b5f6]">۴ ساعت و ۲۰ دقیقه</span>
+                </div>
+                <div class="flex justify-between items-center p-2 rounded-lg bg-[#1c2734]">
+                    <span class="text-sm">📚 مطالعه</span>
+                    <span class="font-mono text-sm font-bold text-[#64b5f6]">۲ ساعت و ۱۵ دقیقه</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-[#242f3d] rounded-2xl p-4 shadow-sm border border-[#2f3e50] flex justify-between items-center">
+            <div>
+                <h3 class="text-sm font-bold">یادآور تمرکز ۱۵ دقیقه‌ای</h3>
+                <p class="text-xs text-[#708499] mt-0.5">ارسال هشدار در صورت عدم فعالیت یا طولانی شدن تسک</p>
+            </div>
+            
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="reminder-toggle" onchange="toggleReminder(this.checked)" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-[#17212b] rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2481cc] border border-[#2b394a]"></div>
+            </label>
+        </section>
+
+    </main>
+
+    <div class="fixed bottom-0 left-0 right-0 p-4 bg-[#0e1621] border-t border-[#242f3d] flex justify-center z-50">
+        <div class="max-w-md w-full flex gap-3">
+            <button onclick="stopSession()" class="flex-1 bg-[#d32f2f] hover:bg-[#b71c1c] text-white py-3 rounded-xl font-bold text-sm transition-all shadow-md border-0 cursor-pointer">
+                🛑 توقف و ثبت تسک
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Telegram Web App API
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand(); // Opens full window inside Telegram
+
+        // 1. Change Category Logic
+        function changeCategory(categoryName) {
+            console.log("Category changed to:", categoryName);
+            // Send data back to your python bot
+            tg.sendData(JSON.stringify({
+                action: "change_category",
+                category: categoryName
+            }));
+        }
+
+        // 2. Report Tab Toggle Logic
+        function switchReport(period) {
+            // Reset tabs UI
+            ['day', 'week', 'month'].forEach(p => {
+                const tab = document.getElementById(`tab-${p}`);
+                tab.classList.remove('bg-[#2481cc]', 'text-white');
+                tab.classList.add('text-[#708499]');
+            });
+            
+            // Set active tab UI
+            const activeTab = document.getElementById(`tab-${period}`);
+            activeTab.classList.add('bg-[#2481cc]', 'text-white');
+            activeTab.classList.remove('text-[#708499]');
+
+            // Here you will fetch data from Supabase/API based on period
+            updateReportUI(period);
+        }
+
+        function updateReportUI(period) {
+            const container = document.getElementById('report-container');
+            if(period === 'day') {
+                container.innerHTML = `
+                    <div class="flex justify-between items-center p-2 rounded-lg bg-[#1c2734]"><span class="text-sm">💻 برنامه‌نویسی</span><span class="font-mono text-sm font-bold text-[#64b5f6]">۴ ساعت</span></div>
+                    <div class="flex justify-between items-center p-2 rounded-lg bg-[#1c2734]"><span class="text-sm">📚 مطالعه</span><span class="font-mono text-sm font-bold text-[#64b5f6]">۲ ساعت</span></div>`;
+            } else if(period === 'week') {
+                container.innerHTML = `
+                    <div class="flex justify-between items-center p-2 rounded-lg bg-[#1c2734]"><span class="text-sm">💻 برنامه‌نویسی</span><span class="font-mono text-sm font-bold text-[#64b5f6]">۲۴ ساعت</span></div>
+                    <div class="flex justify-between items-center p-2 rounded-lg bg-[#1c2734]"><span class="text-sm">📚 مطالعه</span><span class="font-mono text-sm font-bold text-[#64b5f6]">۱۰ ساعت</span></div>`;
+            } else {
+                container.innerHTML = `
+                    <div class="flex justify-between items-center p-2 rounded-lg bg-[#1c2734]"><span class="text-sm">💻 برنامه‌نویسی</span><span class="font-mono text-sm font-bold text-[#64b5f6]">۹۵ ساعت</span></div>
+                    <div class="flex justify-between items-center p-2 rounded-lg bg-[#1c2734]"><span class="text-sm">📚 مطالعه</span><span class="font-mono text-sm font-bold text-[#64b5f6]">۴۲ ساعت</span></div>`;
+            }
+        }
+
+        // 3. Toggle Reminder Switch
+        function toggleReminder(isEnabled) {
+            console.log("Reminders status:", isEnabled);
+            tg.sendData(JSON.stringify({
+                action: "toggle_reminder",
+                status: isEnabled
+            }));
+        }
+
+        // 4. Manage Categories Mock
+        function manageCategories() {
+            tg.sendData(JSON.stringify({ action: "open_manage_menu" }));
+            tg.close();
+        }
+
+        // 5. Stop Session Button
+        function stopSession() {
+            tg.sendData(JSON.stringify({ action: "stop_session" }));
+            tg.close();
+        }
+    </script>
+</body>
+</html>
