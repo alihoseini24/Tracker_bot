@@ -352,24 +352,24 @@ def main():
     except Exception as e:
         logging.error(f"Failed to set bot commands: {e}")
     
-       tz_rome = pytz.timezone("Europe/Rome")
+    # 💡 فاصله‌گذاری استاندارد و یکدست برای بخش زمان‌بندی
+    tz_rome = pytz.timezone("Europe/Rome")
     
     # کرون جاب گزارش شبانه
     application.job_queue.run_daily(send_daily_reports, time=time(hour=0, minute=0, second=0, tzinfo=tz_rome))
     
-    # 💡 اصلاح محاسبات زمان برای ربع ساعت رند بعدی
+    # محاسبه زمان رند بعدی برای شروع دقیق ربع ساعت‌ها (:۰۰, :۱۵, :۳۰, :۴۵)
     now_rome = datetime.now(tz_rome)
     minutes_to_next_quarter = 15 - (now_rome.minute % 15)
     
-    # ساخت دقیق دیت‌تایم رند بعدی بدون ثانیه‌های اضافه
     next_quarter_start = now_rome + timedelta(minutes=minutes_to_next_quarter)
     next_quarter_start = next_quarter_start.replace(second=0, microsecond=0)
 
-    # 🔔 اصلاح کرون جاب یادآور تمرکز ۱۵ دقیقه‌ای کاملاً رند شده
+    # کرون جاب یادآور تمرکز ۱۵ دقیقه‌ای کاملاً رند شده
     application.job_queue.run_repeating(
         check_focus_reminders, 
         interval=timedelta(minutes=15), 
-        first=next_quarter_start # 💡 تغییر اصلی: پاس دادن کل شیء datetime به جای .time()
+        first=next_quarter_start
     )
 
     application.add_handler(CommandHandler("register", register))
