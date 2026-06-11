@@ -65,69 +65,78 @@
     </main>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
+       const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const activeCat = urlParams.get('active_cat') || 'هیچ تسکی فعال نیست';
-        let durationSeconds = parseInt(urlParams.get('duration')) || 0;
-        const categoriesList = urlParams.get('categories') ? urlParams.get('categories').split(',') : [];
+const urlParams = new URLSearchParams(window.location.search);
+const activeCat = urlParams.get('active_cat');
+let durationSeconds = parseInt(urlParams.get('duration')) || 0;
+const categoriesList = urlParams.get('categories') ? urlParams.get('categories').split(',') : [];
 
-        document.getElementById('active-category').innerText = activeCat;
+// مدیریت هدر
+if (activeCat) {
+    document.getElementById('active-category').innerText = activeCat;
+} else {
+    document.getElementById('active-category').innerText = "نیاز به همگام‌سازی کیبورد";
+}
 
-        function formatTime(seconds) {
-            const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
-            const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
-            const s = String(seconds % 60).padStart(2, '0');
-            return `${h}:${m}:${s}`;
-        }
+function formatTime(seconds) {
+    const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
+    const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+    const s = String(seconds % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+}
 
-        if (durationSeconds > 0 && activeCat !== 'هیچ تسکی فعال نیست') {
-            setInterval(() => {
-                durationSeconds++;
-                document.getElementById('session-timer').innerText = formatTime(durationSeconds);
-            }, 1000);
-        } else {
-            document.getElementById('session-timer').innerText = "00:00:00";
-        }
+if (durationSeconds > 0 && activeCat && activeCat !== 'هیچ تسکی فعال نیست') {
+    setInterval(() => {
+        durationSeconds++;
+        document.getElementById('session-timer').innerText = formatTime(durationSeconds);
+    }, 1000);
+} else {
+    document.getElementById('session-timer').innerText = "00:00:00";
+}
 
-        const grid = document.getElementById('categories-grid');
-        if (categoriesList.length > 0) {
-            grid.innerHTML = '';
-            categoriesList.forEach(cat => {
-                const isCurrent = (cat === activeCat);
-                const btnClass = isCurrent 
-                    ? "p-3 rounded-xl bg-[#2481cc] transition-all text-sm font-medium text-right flex items-center justify-between border-0 cursor-pointer w-full"
-                    : "p-3 rounded-xl bg-[#2b394a] hover:bg-[#2481cc] transition-all text-sm font-medium text-right flex items-center justify-between group border-0 cursor-pointer w-full";
-                
-                const dotClass = isCurrent ? "w-2 h-2 rounded-full bg-white block" : "w-2 h-2 rounded-full bg-[#2481cc] group-hover:bg-white hidden";
+const grid = document.getElementById('categories-grid');
+if (categoriesList.length > 0) {
+    grid.innerHTML = '';
+    categoriesList.forEach(cat => {
+        const isCurrent = (cat === activeCat);
+        const btnClass = isCurrent 
+            ? "p-3 rounded-xl bg-[#2481cc] transition-all text-sm font-medium text-right flex items-center justify-between border-0 cursor-pointer w-full"
+            : "p-3 rounded-xl bg-[#2b394a] hover:bg-[#2481cc] transition-all text-sm font-medium text-right flex items-center justify-between group border-0 cursor-pointer w-full";
+        
+        const dotClass = isCurrent ? "w-2 h-2 rounded-full bg-white block" : "w-2 h-2 rounded-full bg-[#2481cc] group-hover:bg-white hidden";
 
-                grid.innerHTML += `
-                    <button onclick="changeCategory('${cat}')" class="${btnClass}">
-                        <span>${cat}</span>
-                        <span class="${dotClass}"></span>
-                    </button>
-                `;
-            });
-        } else {
-            grid.innerHTML = '<p class="text-xs text-[#708499] col-span-2 text-center">دسته‌بندی یافت نشد. از منوی مدیریت استفاده کنید.</p>';
-        }
+        grid.innerHTML += `
+            <button onclick="changeCategory('${cat}')" class="${btnClass}">
+                <span>${cat}</span>
+                <span class="${dotClass}"></span>
+            </button>
+        `;
+    });
+} else {
+    grid.innerHTML = `
+        <div class="col-span-2 text-center py-4 space-y-3">
+            <p class="text-xs text-[#708499]">دیتای مستقیم یافت نشد. لطفاً در چت ربات دستور /buttons را بزنید و از دکمهٔ شیشه‌ای داخل چت وارد شوید.</p>
+        </div>
+    `;
+}
 
-        function changeCategory(categoryName) {
-            tg.sendData(JSON.stringify({ action: "change_category", category: categoryName }));
-        }
-        function toggleReminder(isEnabled) {
-            tg.sendData(JSON.stringify({ action: "toggle_reminder", status: isEnabled }));
-        }
-        function manageCategories() {
-            tg.sendData(JSON.stringify({ action: "open_manage_menu" }));
-            tg.close();
-        }
-        function stopSession() {
-            tg.sendData(JSON.stringify({ action: "stop_session" }));
-            tg.close();
-        }
+function changeCategory(categoryName) {
+    tg.sendData(JSON.stringify({ action: "change_category", category: categoryName }));
+}
+function toggleReminder(isEnabled) {
+    tg.sendData(JSON.stringify({ action: "toggle_reminder", status: isEnabled }));
+}
+function manageCategories() {
+    tg.sendData(JSON.stringify({ action: "open_manage_menu" }));
+    tg.close();
+}
+function stopSession() {
+    tg.sendData(JSON.stringify({ action: "stop_session" }));
+    tg.close();
+}
     </script>
 </body>
 </html>
