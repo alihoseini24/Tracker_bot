@@ -19,7 +19,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 last_group_sync_msgs = {}
 
 # 🌐 آدرس پایه مینی‌اپ شما (اینجا را با آدرس دقیق خودت جایگزین کن)
-BASE_WEBAPP_URL = "https://yourusername.github.io/your-repo/"
+BASE_WEBAPP_URL = "https://alihoseini24.github.io/Tracker_bot/"
 
 def get_tracker_keyboard(user_id):
     categories = get_categories(user_id) 
