@@ -25,10 +25,14 @@ def get_tracker_keyboard(user_id):
     categories = get_categories(user_id) 
     
     # اگر کاربر هنوز هیچ دسته‌بندی در سوپابیس نداشت، یک لیست پیش‌فرض بگذار تا فرانت‌اَند ارور ندهد
+    categories = get_categories(user_id) 
     if not categories:
         categories = ["💻 برنامه‌نویسی", "📚 مطالعه", "🛑 استراحت"]
         
     current = get_current_session(user_id) 
+    
+    # 🔔 دریافت وضعیت واقعی ریمایندر کاربر از دیتابیس (تابع آن را احتمالا داری)
+    is_reminder_on = get_reminder_status(user_id) # خروجی باید True یا False باشد
     
     active_cat = current['category'] if current else "هیچ تسکی فعال نیست"
     active_duration = current['duration'] if current else 0 
@@ -37,6 +41,7 @@ def get_tracker_keyboard(user_id):
         "categories": ",".join(categories),
         "active_cat": active_cat,
         "duration": active_duration,
+        "reminder": "true" if is_reminder_on else "false", # 💡 اضافه شدن وضعیت ریمایندر
         "_v": datetime.now().timestamp()
     }
     encoded_params = urllib.parse.urlencode(params)
