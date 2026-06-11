@@ -37,7 +37,7 @@ def get_tracker_keyboard(user_id):
     web_app_url = f"{BASE_WEBAPP_URL}?{encoded_params}"
     
     keyboard = []
-    keyboard.append([KeyboardButton(text="🌐 باز کردن پنل گرافیکی", web_app=WebAppInfo(url=web_app_url))])
+    keyboard.append([KeyboardButton(text="🌐 باز کردن پنل گرافیکی", web_app=WebAppInfo(url=BASE_WEBAPP_URL))])
     
     for i in range(0, len(categories), 2):
         row = [KeyboardButton(categories[i])]
