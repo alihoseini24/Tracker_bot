@@ -24,7 +24,7 @@ def get_tracker_keyboard(user_id):
     keyboard.append([
         KeyboardButton(
             text="🌐 باز کردن پنل گرافیکی", 
-            web_app=WebAppInfo(url="https://t.me/WayddBot/Tracker")
+            web_app=WebAppInfo(url="https://alihoseini24.github.io/Tracker_bot/")
         )
     ])
     
