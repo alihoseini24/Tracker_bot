@@ -23,6 +23,11 @@ BASE_WEBAPP_URL = "https://alihoseini24.github.io/Tracker_bot/"
 
 def get_tracker_keyboard(user_id):
     categories = get_categories(user_id) 
+    
+    # اگر کاربر هنوز هیچ دسته‌بندی در سوپابیس نداشت، یک لیست پیش‌فرض بگذار تا فرانت‌اَند ارور ندهد
+    if not categories:
+        categories = ["💻 برنامه‌نویسی", "📚 مطالعه", "🛑 استراحت"]
+        
     current = get_current_session(user_id) 
     
     active_cat = current['category'] if current else "هیچ تسکی فعال نیست"
@@ -38,7 +43,8 @@ def get_tracker_keyboard(user_id):
     web_app_url = f"{BASE_WEBAPP_URL}?{encoded_params}"
     
     keyboard = []
-    keyboard.append([KeyboardButton(text="🌐 باز کردن پنل گرافیکی", web_app=WebAppInfo(url=BASE_WEBAPP_URL))])
+    # 💡 اصلاح اصلی: استفاده از web_app_url به جای BASE_WEBAPP_URL
+    keyboard.append([KeyboardButton(text="🌐 باز کردن پنل گرافیکی", web_app=WebAppInfo(url=web_app_url))])
     
     for i in range(0, len(categories), 2):
         row = [KeyboardButton(categories[i])]
@@ -49,7 +55,6 @@ def get_tracker_keyboard(user_id):
     keyboard.append([KeyboardButton("⏱️ Current Session"), KeyboardButton("📊 Day Report")])
     keyboard.append([KeyboardButton("❌ Cancel Task"), KeyboardButton("⚙️ Manage")])
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-
 
 def get_user_group_id(user_id):
     try:
