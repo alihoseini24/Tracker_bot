@@ -2,12 +2,10 @@ import os
 import logging
 import asyncio
 import pytz
-import urllib.parse
-import json
 from datetime import time, datetime, timedelta
 from threading import Thread
 from http.server import SimpleHTTPRequestHandler, HTTPServer
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand, ReplyKeyboardRemove, MenuButtonWebApp
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand, ReplyKeyboardRemove
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, CallbackQueryHandler, filters
 from database import (init_db, register_user, unregister_user, toggle_reminders, get_all_users_with_reminders,
                       register_group, get_categories, add_batch_categories, delete_category, rename_category, 
@@ -18,39 +16,9 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 last_group_sync_msgs = {}
 
-# 🌐 آدرس پایه مینی‌اپ شما (اینجا را با آدرس دقیق خودت جایگزین کن)
-BASE_WEBAPP_URL = "https://alihoseini24.github.io/Tracker_bot/"
-
 def get_tracker_keyboard(user_id):
-    categories = get_categories(user_id) 
-    
-    # اگر کاربر هنوز هیچ دسته‌بندی در سوپابیس نداشت، یک لیست پیش‌فرض بگذار تا فرانت‌اَند ارور ندهد
-    categories = get_categories(user_id) 
-    if not categories:
-        categories = ["💻 برنامه‌نویسی", "📚 مطالعه", "🛑 استراحت"]
-        
-    current = get_current_session(user_id) 
-    
-    # 🔔 دریافت وضعیت واقعی ریمایندر کاربر از دیتابیس (تابع آن را احتمالا داری)
-    is_reminder_on = get_reminder_status(user_id) # خروجی باید True یا False باشد
-    
-    active_cat = current['category'] if current else "هیچ تسکی فعال نیست"
-    active_duration = current['duration'] if current else 0 
-    
-    params = {
-        "categories": ",".join(categories),
-        "active_cat": active_cat,
-        "duration": active_duration,
-        "reminder": "true" if is_reminder_on else "false", # 💡 اضافه شدن وضعیت ریمایندر
-        "_v": datetime.now().timestamp()
-    }
-    encoded_params = urllib.parse.urlencode(params)
-    web_app_url = f"{BASE_WEBAPP_URL}?{encoded_params}"
-    
+    categories = get_categories(user_id)
     keyboard = []
-    # 💡 اصلاح اصلی: استفاده از web_app_url به جای BASE_WEBAPP_URL
-    keyboard.append([KeyboardButton(text="🌐 باز کردن پنل گرافیکی", web_app=WebAppInfo(url=web_app_url))])
-    
     for i in range(0, len(categories), 2):
         row = [KeyboardButton(categories[i])]
         if i + 1 < len(categories):
@@ -81,17 +49,8 @@ async def set_bot_commands(application: Application):
     ]
     try:
         await application.bot.set_my_commands(commands)
-        
-        # 🌐 تنظیم دکمهٔ دائمی پایین چت (Menu Button) کنار کادر متن
-        await application.bot.set_chat_menu_button(
-            menu_button=MenuButtonWebApp(
-                text="🌐 پنل گرافیکی",
-                web_app=WebAppInfo(url=BASE_WEBAPP_URL)
-            )
-        )
-        logging.info("Bot commands and Menu Button set successfully.")
     except Exception as e:
-        logging.error(f"Failed to set commands or menu button natively: {e}")
+        logging.error(f"Failed to set commands natively: {e}")
 
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -220,47 +179,11 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "mg_cancel_unreg":
         await query.message.edit_text("Operation canceled.")
 
-
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
     user_name = update.effective_user.first_name
     context.user_data['user_name'] = user_name
-    
-    if update.message and update.message.web_app_data:
-        raw_data = update.message.web_app_data.data
-        data = json.loads(raw_data)
-        action = data.get("action")
-        
-        if action == "change_category":
-            category = data.get("category")
-            prev_info = start_new_activity(user_id, chat_id, category)
-            msg = f"👤 {user_name} ➔ {category}"
-            if prev_info:
-                msg += f"\n\n⏱️ Prev: {prev_info['category']} ({prev_info['duration'] // 60}h {prev_info['duration'] % 60}m)"
-            await context.bot.send_message(chat_id=chat_id, text=msg)
-            
-        elif action == "toggle_reminder":
-            status = data.get("status")
-            toggle_reminders(user_id) # همگام با دیتابیس تو
-            status_text = "فعال" if status else "غیرفعال"
-            await context.bot.send_message(chat_id=chat_id, text=f"⚙️ یادآور ۱۵ دقیقه‌ای برای شما {status_text} شد.")
-            
-        elif action == "stop_session":
-            canceled_cat = cancel_active_activity(user_id)
-            if canceled_cat:
-                msg = f"❌ {user_name} تسک جاری را متوقف کرد -> {canceled_cat}"
-            else:
-                msg = f"⚠️ {user_name} -> تسک فعالی برای توقف وجود نداشت"
-            await context.bot.send_message(chat_id=chat_id, text=msg)
-            
-        elif action == "open_manage_menu":
-            await manage_menu(update, context)
-            
-        return
-
-    if not update.message or not update.message.text:
-        return
     text = update.message.text.strip()
     
     if text == "⚙️ Manage" or text == "/manage":
@@ -409,6 +332,7 @@ def main():
     
     application = Application.builder().token(token).build()
     
+    # تنظیم دستورات منو بدون بستن لوپ اصلی با استفاده از لوپ داخلی خود ربات
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
@@ -421,13 +345,17 @@ def main():
         logging.error(f"Failed to set bot commands: {e}")
     
     tz_rome = pytz.timezone("Europe/Rome")
+    
+    # کرون جاب گزارش شبانه
     application.job_queue.run_daily(send_daily_reports, time=time(hour=0, minute=0, second=0, tzinfo=tz_rome))
     
+     # محاسبه زمان رند بعدی برای شروع دقیق ربع ساعت‌ها (:۰۰, :۱۵, :۳۰, :۴۵)
     now_rome = datetime.now(tz_rome)
     minutes_to_next_quarter = 15 - (now_rome.minute % 15)
     next_quarter_start = now_rome + timedelta(minutes=minutes_to_next_quarter)
     next_quarter_start = next_quarter_start.replace(second=0, microsecond=0)
 
+    # کرون جاب یادآور تمرکز ۱۵ دقیقه‌ای کاملاً رند شده
     application.job_queue.run_repeating(
         check_focus_reminders, 
         interval=timedelta(minutes=15), 
