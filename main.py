@@ -297,7 +297,18 @@ async def check_focus_reminders(context: ContextTypes.DEFAULT_TYPE):
         
         current = get_current_session(u_id)
         if current:
-            reminder_msg = f"🔔 هنوز به {current['category']} مشغولی؟"
+            # استخراج مستقیم دقیقه از خروجی دیتابیس
+            total_minutes = current.get('duration', 0)
+            hours = total_minutes // 60
+            minutes = total_minutes % 60
+            
+            # فرمت‌دهی متن زمان سپری‌شده
+            if hours > 0:
+                time_str = f"{hours} ساعت و {minutes} دقیقه"
+            else:
+                time_str = f"{minutes} دقیقه"
+                
+            reminder_msg = f"🔔 هنوز به {current['category']} مشغولی؟ ({time_str} گذشته)"
         else:
             reminder_msg = "🔔 به چه مشغولی؟ یه کار مفید انجام بده."
             
