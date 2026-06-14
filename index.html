@@ -190,7 +190,7 @@
             // اگر به خاطر هماهنگی ثانیه‌ها عدد منفی شد، صفر نشان داده شود
             if (diffMins < 0) diffMins = 0;
             
-            container.innerText = `👤 در حال انجام: ${current.category} (${diffMins} دقیقه گذشته)`;
+            container.innerText = `${current.category} \n ${diffMins} دقیقه`;
             container.className = "text-lg font-bold text-indigo-600 dark:text-indigo-400";
             actions.classList.remove("hidden");
         } else {
