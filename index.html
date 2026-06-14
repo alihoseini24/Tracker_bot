@@ -1,9 +1,20 @@
+پالت رنگی جدید بر پایه شیشه‌ای (Glassmorphism) روی پس‌زمینه کاملاً مشکی، همراه با تصحیح خطای ارور کنسول (`SyntaxError` به دلیل تعریف دوگانه متغیر `supabase`) در کد زیر اعمال شد.
+
+تغییرات ظاهری طبق تصاویر ارسالی:
+
+1. **بک‌گراند اصلی:** مشکی خالص (`#000000`).
+2. **کارت‌ها (Glass Effect):** پس‌زمینه زغال‌سنگی بسیار کم‌رنگ با شفافیت بالا، بلور شیشه‌ای (`backdrop-blur-md`) و خطوط دور (Border) ظریف و نیمه‌شفاف.
+3. **دکمه‌های تسک:** هماهنگ با استایل جدید ویجت‌ها.
+
+کد کامل و اصلاح‌شده:
+
+```html
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>Focus Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
@@ -11,17 +22,12 @@
         tailwind.config = { 
             darkMode: 'class'
         }
-        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
     </script>
     <style>
         body { font-family: 'Vazirmatn', sans-serif; }
         
         @keyframes subtlePulse {
-            0%, 100% { opacity: 1; }
+            0%, 100% { opacity: 0.8; }
             50% { opacity: 0.3; }
         }
         .pulse-slow {
@@ -30,144 +36,146 @@
 
         summary::-webkit-details-marker { display: none; }
         summary { list-style: none; }
+
+        /* Glassmorphism Classes for New Theme */
+        .glass-card {
+            background: rgba(28, 28, 30, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-input:focus {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
     </style>
 </head>
-<body class="bg-white text-gray-900 dark:bg-[#121212] dark:text-gray-100 min-h-screen p-4 transition-colors duration-200 flex flex-col justify-between">
+<body class="bg-[#000000] text-[#f2f2f7] min-h-screen p-4 flex flex-col justify-between">
 
-    <!-- Main Dashboard Container -->
-    <div class="max-w-md w-full mx-auto space-y-4 pt-2 flex-grow">
+    <div class="max-w-md w-full mx-auto space-y-3 pt-2 flex-grow">
         
-        <!-- 1. Context Control Header -->
-        <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4 shadow-sm flex items-center justify-between">
+        <div class="glass-card rounded-2xl p-4 shadow-xl flex items-center justify-between">
             <div class="flex items-center gap-2">
-                <select id="user-selector" onchange="handleUserChange()" class="bg-white dark:bg-[#121212] text-gray-900 dark:text-white border border-gray-200 dark:border-[#2d2d2d] rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none w-40">
+                <select id="user-selector" onchange="handleUserChange()" class="glass-input text-white rounded-xl px-3 py-1.5 text-sm font-medium focus:outline-none w-44">
                     <option value="">Loading...</option>
                 </select>
             </div>
-            
-            <button onclick="toggleTheme()" class="p-2 rounded-lg bg-white dark:bg-[#121212] border border-gray-200 dark:border-[#2d2d2d] text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] transition">
-                <svg id="theme-icon-dark" class="hidden dark:block w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 9H3m15.364-3.364l-.707.707M6.343 17.657l-.707.707M16.243 17.657l.707.707M6.343 6.343l.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z"/></svg>
-                <svg id="theme-icon-light" class="block dark:hidden w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
-            </button>
+            <div class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
         </div>
         
-        <!-- 2. Timers Section -->
-        <div class="grid grid-cols-2 gap-3 bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4 shadow-sm text-center">
-            <div class="space-y-2 border-r border-gray-200 dark:border-[#2d2d2d] pr-2">
-                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Workday End</p>
-                <p id="countdown-work" class="text-lg font-normal font-mono text-gray-800 dark:text-gray-200">00:00:00</p>
-                <div class="w-full bg-gray-200 dark:bg-[#2d2d2d] h-1 rounded-full overflow-hidden">
-                    <div id="progress-work" class="bg-gray-400 dark:bg-gray-500 h-1 w-0 transition-all duration-1000 pulse-slow"></div>
+        <div class="grid grid-cols-2 gap-3 glass-card rounded-2xl p-4 shadow-xl text-center">
+            <div class="space-y-1.5 border-r border-white/10 pr-2">
+                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Workday End</p>
+                <p id="countdown-work" class="text-xl font-normal font-mono text-zinc-200">00:00:00</p>
+                <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden">
+                    <div id="progress-work" class="bg-zinc-400 h-1 w-0 transition-all duration-1000 pulse-slow"></div>
                 </div>
             </div>
-            <div class="space-y-2 pl-2">
-                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Day End</p>
-                <p id="countdown-day" class="text-lg font-normal font-mono text-gray-800 dark:text-gray-200">00:00:00</p>
-                <div class="w-full bg-gray-200 dark:bg-[#2d2d2d] h-1 rounded-full overflow-hidden">
-                    <div id="progress-day" class="bg-gray-400 dark:bg-gray-500 h-1 w-0 transition-all duration-1000 pulse-slow"></div>
+            <div class="space-y-1.5 pl-2">
+                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Day End</p>
+                <p id="countdown-day" class="text-xl font-normal font-mono text-zinc-200">00:00:00</p>
+                <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden">
+                    <div id="progress-day" class="bg-zinc-400 h-1 w-0 transition-all duration-1000 pulse-slow"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Active Monitor Status Block -->
-        <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-5 shadow-sm text-center space-y-4">
+        <div class="glass-card rounded-2xl p-5 shadow-xl text-center space-y-4">
             <div class="space-y-1">
-                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Current Session</p>
-                <h2 id="active-task-status" class="text-xl font-bold tracking-tight text-gray-500">Select User</h2>
-                <p id="active-task-time" class="text-xs text-gray-400 font-medium h-4"></p>
+                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Current Session</p>
+                <h2 id="active-task-status" class="text-xl font-bold tracking-tight text-zinc-400">Select User</h2>
+                <p id="active-task-time" class="text-xs text-zinc-400 font-medium h-4"></p>
             </div>
 
-            <!-- Action Controls -->
-            <div class="flex justify-center items-center gap-2 pt-2 border-t border-gray-100 dark:border-[#2d2d2d]">
-                <button onclick="openCategoriesModal()" class="flex-1 bg-gray-900 text-white dark:bg-white dark:text-gray-900 py-2 rounded-lg text-xs font-medium tracking-wide hover:opacity-90 transition">
+            <div class="flex justify-center items-center gap-2 pt-2 border-t border-white/5">
+                <button onclick="openCategoriesModal()" class="flex-1 bg-white text-black py-2 rounded-xl text-xs font-medium tracking-wide hover:bg-zinc-200 transition">
                     Start Task
                 </button>
-                <button id="btn-cancel" onclick="cancelActiveTask()" class="flex-1 hidden bg-gray-100 text-red-600 border border-gray-200 dark:bg-[#121212] dark:border-red-900/30 dark:text-red-400 py-2 rounded-lg text-xs font-medium tracking-wide hover:bg-red-50 dark:hover:bg-red-950/20 transition">
+                <button id="btn-cancel" onclick="cancelActiveTask()" class="flex-1 hidden bg-red-950/30 border border-red-900/30 text-red-400 py-2 rounded-xl text-xs font-medium tracking-wide hover:bg-red-950/50 transition">
                     Cancel Task
                 </button>
             </div>
         </div>
 
-        <!-- 3. Performance Analytics Modules -->
         <div class="space-y-2">
-            <details class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4 group" open>
+            <details class="glass-card rounded-2xl p-4 group" open>
                 <summary class="flex justify-between items-center cursor-pointer select-none">
-                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Today</span>
-                    <svg class="w-3 h-3 text-gray-400 dark:text-gray-500 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Today</span>
+                    <svg class="w-3 h-3 text-zinc-500 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
-                <div id="report-day" class="text-[11px] text-gray-600 dark:text-gray-400 space-y-1 text-left font-medium mt-3"></div>
+                <div id="report-day" class="text-[11px] text-zinc-300 space-y-1 text-left font-medium mt-3"></div>
             </details>
 
-            <details class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4 group">
+            <details class="glass-card rounded-2xl p-4 group">
                 <summary class="flex justify-between items-center cursor-pointer select-none">
-                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Last 7 Days</span>
-                    <svg class="w-3 h-3 text-gray-400 dark:text-gray-500 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Last 7 Days</span>
+                    <svg class="w-3 h-3 text-zinc-500 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
-                <div id="report-week" class="text-[11px] text-gray-600 dark:text-gray-400 space-y-1 text-left font-medium mt-3"></div>
+                <div id="report-week" class="text-[11px] text-zinc-300 space-y-1 text-left font-medium mt-3"></div>
             </details>
 
-            <details class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4 group">
+            <details class="glass-card rounded-2xl p-4 group">
                 <summary class="flex justify-between items-center cursor-pointer select-none">
-                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Last 30 Days</span>
-                    <svg class="w-3 h-3 text-gray-400 dark:text-gray-500 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Last 30 Days</span>
+                    <svg class="w-3 h-3 text-zinc-500 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
-                <div id="report-month" class="text-[11px] text-gray-600 dark:text-gray-400 space-y-1 text-left font-medium mt-3"></div>
+                <div id="report-month" class="text-[11px] text-zinc-300 space-y-1 text-left font-medium mt-3"></div>
             </details>
         </div>
     </div>
 
-    <!-- Hidden Subtle Footer Link -->
     <div class="max-w-md w-full mx-auto text-center pt-8 pb-2">
-        <button onclick="openHistoryModal()" class="text-[10px] text-gray-300 dark:text-zinc-700 hover:text-gray-500 dark:hover:text-zinc-500 transition tracking-wider uppercase font-medium focus:outline-none">
+        <button onclick="openHistoryModal()" class="text-[10px] text-zinc-800 hover:text-zinc-600 transition tracking-wider uppercase font-medium focus:outline-none">
             Edit History
         </button>
     </div>
 
-    <!-- Category Entry Modal -->
-    <div id="categories-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end justify-center hidden" onclick="closeCategoriesModal()">
-        <div class="bg-white dark:bg-[#1e1e1e] border-t border-gray-200 dark:border-[#2d2d2d] w-full max-w-md rounded-t-2xl p-5 space-y-4 shadow-2xl transition-transform" onclick="event.stopPropagation()">
-            <div class="flex justify-between items-center border-b border-gray-100 dark:border-[#2d2d2d] pb-2">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Select New Target Task</h3>
-                <button onclick="closeCategoriesModal()" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-white font-medium">Dismiss</button>
+    <div id="categories-modal" class="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-end justify-center hidden" onclick="closeCategoriesModal()">
+        <div class="bg-[#1c1c1e] border-t border-white/10 w-full max-w-md rounded-t-3xl p-5 space-y-4 shadow-2xl transition-transform" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center border-b border-white/5 pb-2">
+                <h3 class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Select Target Task</h3>
+                <button onclick="closeCategoriesModal()" class="text-xs text-zinc-400 hover:text-white font-medium">Dismiss</button>
             </div>
             <div id="categories-grid" class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1"></div>
         </div>
     </div>
 
-    <!-- Micro Subtle History Editor Modal -->
-    <div id="history-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden" onclick="closeHistoryModal()">
-        <div class="bg-white dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] w-full max-w-sm rounded-xl p-4 space-y-4 shadow-2xl" onclick="event.stopPropagation()">
-            <div class="flex justify-between items-center border-b border-gray-100 dark:border-[#2d2d2d] pb-2">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Modify Activity History</h3>
-                <button onclick="closeHistoryModal()" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-white">Close</button>
+    <div id="history-modal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden" onclick="closeHistoryModal()">
+        <div class="bg-[#1c1c1e] border border-white/10 w-full max-w-sm rounded-2xl p-4 space-y-4 shadow-2xl" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center border-b border-white/5 pb-2">
+                <h3 class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Modify Activity History</h3>
+                <button onclick="closeHistoryModal()" class="text-xs text-zinc-400 hover:text-white">Close</button>
             </div>
             
             <div class="space-y-3 text-xs">
                 <div>
-                    <label class="block text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Select Session Record</label>
-                    <select id="history-item-selector" onchange="populateHistoryFields()" class="w-full bg-gray-50 dark:bg-[#121212] text-gray-900 dark:text-white border border-gray-200 dark:border-[#2d2d2d] rounded-lg p-2 focus:outline-none"></select>
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">Select Session Record</label>
+                    <select id="history-item-selector" onchange="populateHistoryFields()" class="w-full glass-input text-white rounded-xl p-2 focus:outline-none"></select>
                 </div>
                 
                 <div class="grid grid-cols-1 gap-2">
                     <div>
-                        <label class="block text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Category Label</label>
-                        <input type="text" id="edit-history-category" class="w-full bg-gray-50 dark:bg-[#121212] border border-gray-200 dark:border-[#2d2d2d] rounded-lg p-2 focus:outline-none text-gray-800 dark:text-gray-200">
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">Category Label</label>
+                        <input type="text" id="edit-history-category" class="w-full glass-input rounded-xl p-2 focus:outline-none text-zinc-200">
                     </div>
                     <div>
-                        <label class="block text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Start Timestamp (Local Time)</label>
-                        <input type="datetime-local" id="edit-history-start" class="w-full bg-gray-50 dark:bg-[#121212] border border-gray-200 dark:border-[#2d2d2d] rounded-lg p-2 focus:outline-none text-gray-800 dark:text-gray-200">
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">Start Timestamp</label>
+                        <input type="datetime-local" id="edit-history-start" class="w-full glass-input rounded-xl p-2 focus:outline-none text-zinc-200">
                     </div>
                     <div>
-                        <label class="block text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">End Timestamp (Local Time)</label>
-                        <input type="datetime-local" id="edit-history-end" class="w-full bg-gray-50 dark:bg-[#121212] border border-gray-200 dark:border-[#2d2d2d] rounded-lg p-2 focus:outline-none text-gray-800 dark:text-gray-200">
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">End Timestamp</label>
+                        <input type="datetime-local" id="edit-history-end" class="w-full glass-input rounded-xl p-2 focus:outline-none text-zinc-200">
                     </div>
                 </div>
 
                 <div class="pt-2 flex gap-2">
-                    <button onclick="submitHistoryUpdate()" class="flex-1 bg-gray-950 text-white dark:bg-white dark:text-gray-950 py-2 rounded-lg font-medium text-center hover:opacity-90 transition">
+                    <button onclick="submitHistoryUpdate()" class="flex-1 bg-white text-black py-2 rounded-xl font-medium text-center hover:bg-zinc-200 transition">
                         Apply Changes
                     </button>
-                    <button onclick="deleteHistoryItem()" class="px-3 bg-red-50 text-red-600 border border-red-100 dark:bg-red-950/20 dark:border-red-900/30 dark:text-red-400 rounded-lg hover:bg-red-100 transition">
+                    <button onclick="deleteHistoryItem()" class="px-3 bg-red-950/20 border border-red-900/30 text-red-400 rounded-xl hover:bg-red-950/40 transition">
                         Delete
                     </button>
                 </div>
@@ -179,6 +187,7 @@
         const SUPABASE_URL = "https://usvegeoutoudjxbsfdov.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_eyRouLDdaSGBOhxlbGezow_jhYlAPEO";
 
+        // حل مشکل ارور کنسول: فقط یک بارلاین کلاینت را بدون کلمه‌ی کلیدیِ تکراری مقداردهی می‌کنیم.
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let CURRENT_USER_ID = null;
@@ -191,16 +200,6 @@
             loadUsersDropdown();
             startCountdowns();
         });
-
-        function toggleTheme() {
-            if (document.documentElement.classList.contains('dark')) {
-                document.documentElement.classList.remove('dark');
-                localStorage.setItem('color-theme', 'light');
-            } else {
-                document.documentElement.classList.add('dark');
-                localStorage.setItem('color-theme', 'dark');
-            }
-        }
 
         function openCategoriesModal() {
             if(!CURRENT_USER_ID) return;
@@ -284,12 +283,12 @@
                     const diffMins = Math.floor((new Date() - startTime) / 60000);
                     
                     container.innerText = current.category;
-                    container.className = "text-xl font-bold tracking-tight text-indigo-600 dark:text-indigo-400";
+                    container.className = "text-xl font-bold tracking-tight text-zinc-200";
                     timeContainer.innerText = `${diffMins < 0 ? 0 : diffMins}m elapsed`;
                     cancelBtn.classList.remove("hidden");
                 } else {
                     container.innerText = "Idle";
-                    container.className = "text-xl font-bold tracking-tight text-gray-400 dark:text-gray-600";
+                    container.className = "text-xl font-bold tracking-tight text-zinc-600";
                     timeContainer.innerText = "";
                     cancelBtn.classList.add("hidden");
                 }
@@ -311,12 +310,12 @@
                 if (error) throw error;
                 grid.innerHTML = "";
                 
-                const defaultCats = ["Study", "Meal", "Snack", "Grocery", "Movie/Series", "Commute", "Exercises", "Sleep"];
+                const defaultCats = ["😈SpicyTime", "❤️Call/Chat", "📚Study&lock", "☕Break/Snack", "🍽️Meal/Cook", "💤Sleep", "📝Plan and prepare", "🛁washing up / Shower", "🚌Commute", "💪Exercises", "🛒Grocery", "🍿Movie/Series"];
                 const cats = (data && data.length > 0) ? data.map(r => r.category) : defaultCats;
 
                 cats.forEach(cat => {
                     const btn = document.createElement("button");
-                    btn.className = "bg-gray-50 dark:bg-[#121212] border border-gray-200 dark:border-[#2d2d2d] hover:bg-gray-100 dark:hover:bg-neutral-800 text-gray-800 dark:text-gray-200 p-2.5 rounded-lg text-xs font-medium transition text-center truncate";
+                    btn.className = "bg-white/5 border border-white/10 hover:bg-white/10 text-zinc-200 p-2.5 rounded-xl text-xs font-medium transition text-center truncate";
                     btn.innerText = cat;
                     btn.onclick = () => {
                         startNewTask(cat);
@@ -358,12 +357,12 @@
                     });
                     
                     const keys = Object.keys(summary);
-                    if (keys.length === 0) return "<span class='text-gray-400 dark:text-gray-600 text-[10px]'>Empty</span>";
+                    if (keys.length === 0) return "<span class='text-zinc-600 text-[10px]'>Empty</span>";
                     
                     return keys.map(cat => {
                         const h = Math.floor(summary[cat] / 60);
                         const m = summary[cat] % 60;
-                        return `<div class="flex justify-between border-b border-gray-100 dark:border-[#2d2d2d] py-0.5 max-w-xs"><span class="truncate pr-1">• ${cat}</span><span class="font-bold shrink-0">${h > 0 ? h+'h '+m+'m' : m+'m'}</span></div>`;
+                        return `<div class="flex justify-between border-b border-white/5 py-0.5 max-w-xs"><span class="truncate pr-1">• ${cat}</span><span class="font-bold shrink-0 text-zinc-400">${h > 0 ? h+'h '+m+'m' : m+'m'}</span></div>`;
                     }).join('');
                 };
 
@@ -424,7 +423,6 @@
             }
         }
 
-        // --- History Editor Core Engine Logic ---
         async function fetchRecentHistory() {
             const selector = document.getElementById("history-item-selector");
             selector.innerHTML = "<option>Loading records...</option>";
@@ -541,7 +539,6 @@
             }
         }
 
-        // --- Standard Timers Engine Logic ---
         function updateCountdowns() {
             const now = new Date();
             
@@ -626,3 +623,5 @@
     </script>
 </body>
 </html>
+
+```
