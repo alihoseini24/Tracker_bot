@@ -1,17 +1,14 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl" class="dark">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>پنل مدیریت تمرکز مدرن</title>
+    <title>Focus Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
     <script>
-        // کانفیگ سوییچ تم قبل از رندر کامل صفحه برای جلوگیری از پرش رنگ
-        tailwind.config = {
-            darkMode: 'class',
-        }
+        tailwind.config = { darkMode: 'class' }
         if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
         } else {
@@ -26,63 +23,74 @@
 
     <div class="max-w-2xl mx-auto space-y-6">
         
+        <div class="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-2xl p-4 shadow-sm text-center">
+            <div class="border-r border-gray-200 dark:border-[#2d2d2d] last:border-0">
+                <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Workday End (17:00)</p>
+                <p id="countdown-work" class="text-xl font-bold font-mono text-indigo-600 dark:text-indigo-400 mt-1">00:00:00</p>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Day End (00:00)</p>
+                <p id="countdown-day" class="text-xl font-bold font-mono text-amber-600 dark:text-amber-400 mt-1">00:00:00</p>
+            </div>
+        </div>
+        
         <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-2xl p-6 shadow-sm relative">
-            <button onclick="toggleTheme()" class="absolute top-6 left-6 p-2 rounded-xl bg-gray-200 dark:bg-[#2d2d2d] text-gray-700 dark:text-gray-300 hover:opacity-80 transition">
-                <span id="theme-icon-dark" class="hidden dark:inline">☀️ روز</span>
-                <span id="theme-icon-light" class="inline dark:hidden">🌙 شب</span>
+            <button onclick="toggleTheme()" class="absolute top-6 right-6 p-2 rounded-xl bg-gray-100 dark:bg-[#2d2d2d] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#3d3d3d] transition" aria-label="Toggle Theme">
+                <svg id="theme-icon-dark" class="hidden dark:block w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 9H3m15.364-3.364l-.707.707M6.343 17.657l-.707.707M16.243 17.657l.707.707M6.343 6.343l.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z"/></svg>
+                <svg id="theme-icon-light" class="block dark:hidden w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
             </button>
 
             <div class="text-center space-y-4">
                 <div>
-                    <h1 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">🎯 داشبورد مدیریت تمرکز</h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">مشاهده و مدیریت وضعیت کاربران دیتابیس</p>
+                    <h1 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">🎯 Focus Dashboard</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Monitor and manage user activities directly</p>
                 </div>
                 
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-3 bg-white dark:bg-[#121212] p-3 rounded-xl border border-gray-200 dark:border-[#2d2d2d]">
-                    <label for="user-selector" class="text-sm font-medium text-gray-500 dark:text-gray-400">انتخاب کاربر فعلی:</label>
+                    <label for="user-selector" class="text-sm font-medium text-gray-500 dark:text-gray-400">Active User:</label>
                     <select id="user-selector" onchange="handleUserChange()" class="bg-gray-50 dark:bg-[#1e1e1e] text-gray-900 dark:text-white border border-gray-200 dark:border-[#2d2d2d] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500 w-full sm:w-64">
-                        <option value="">در حال بارگذاری کاربران...</option>
+                        <option value="">Loading users...</option>
                     </select>
                 </div>
             </div>
         </div>
 
         <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-2xl p-6 shadow-sm">
-            <h2 class="text-lg font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-                <span class="flex h-3 w-3 relative">
+            <h2 class="text-md font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                <span class="flex h-2.5 w-2.5 relative">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
                 </span>
-                وضعیت تسک فعلی
+                Current Session
             </h2>
             <div id="active-task-container" class="bg-white dark:bg-[#121212] rounded-xl p-4 border border-gray-200 dark:border-[#2d2d2d] text-center">
-                <p id="active-task-status" class="text-lg font-medium text-gray-400">لطفاً ابتدا یک کاربر را انتخاب کنید.</p>
+                <p id="active-task-status" class="text-base font-medium text-gray-400">Please select a user first.</p>
                 <div id="active-task-actions" class="mt-4 flex justify-center gap-3 hidden">
-                    <button onclick="cancelActiveTask()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition shadow-sm">❌ لغو تسک</button>
+                    <button onclick="cancelActiveTask()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition shadow-sm">❌ Cancel Task</button>
                 </div>
             </div>
         </div>
 
         <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-2xl p-6 shadow-sm">
-            <h2 class="text-lg font-bold text-gray-700 dark:text-gray-300 mb-4">🚀 شروع تسک جدید</h2>
+            <h2 class="text-md font-bold text-gray-700 dark:text-gray-300 mb-4">🚀 Start New Task</h2>
             <div id="categories-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 </div>
         </div>
 
         <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-2xl p-6 shadow-sm">
-            <h2 class="text-lg font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">📊 گزارش عملکرد کاربر</h2>
+            <h2 class="text-md font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">📊 Performance Metrics</h2>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div class="bg-white dark:bg-[#121212] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4 space-y-2">
-                    <div class="text-xs font-bold text-indigo-500 uppercase tracking-wider">امروز</div>
-                    <div id="report-day" class="text-sm text-gray-600 dark:text-gray-300 space-y-1">انتخاب کاربر...</div>
+                    <div class="text-xs font-bold text-indigo-500 uppercase tracking-wider">Today</div>
+                    <div id="report-day" class="text-xs text-gray-600 dark:text-gray-300 space-y-1">Select user...</div>
                 </div>
                 <div class="bg-white dark:bg-[#121212] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4 space-y-2">
-                    <div class="text-xs font-bold text-green-500 uppercase tracking-wider">۷ روز گذشته</div>
-                    <div id="report-week" class="text-sm text-gray-600 dark:text-gray-300 space-y-1">انتخاب کاربر...</div>
+                    <div class="text-xs font-bold text-green-500 uppercase tracking-wider">Last 7 Days</div>
+                    <div id="report-week" class="text-xs text-gray-600 dark:text-gray-300 space-y-1">Select user...</div>
                 </div>
                 <div class="bg-white dark:bg-[#121212] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4 space-y-2">
-                    <div class="text-xs font-bold text-amber-500 uppercase tracking-wider">۳۰ روز گذشته</div>
-                    <div id="report-month" class="text-sm text-gray-600 dark:text-gray-300 space-y-1">انتخاب کاربر...</div>
+                    <div class="text-xs font-bold text-amber-500 uppercase tracking-wider">Last 30 Days</div>
+                    <div id="report-month" class="text-xs text-gray-600 dark:text-gray-300 space-y-1">Select user...</div>
                 </div>
             </div>
         </div>
@@ -90,7 +98,6 @@
     </div>
 
     <script>
-        // CONFIGURATION - مقادیر خودت را جایگزین کن
         const SUPABASE_URL = "https://usvegeoutoudjxbsfdov.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_eyRouLDdaSGBOhxlbGezow_jhYlAPEO";
 
@@ -98,12 +105,14 @@
 
         let CURRENT_USER_ID = null;
         let CURRENT_CHAT_ID = null;
+        let autoRefreshTimer = null;
+        let countdownTimer = null;
 
         document.addEventListener("DOMContentLoaded", () => {
             loadUsersDropdown();
+            startCountdowns();
         });
 
-        // مدیریت و تغییر تم دارک / لایت
         function toggleTheme() {
             if (document.documentElement.classList.contains('dark')) {
                 document.documentElement.classList.remove('dark');
@@ -114,7 +123,6 @@
             }
         }
 
-        // ۱. لود کردن لیست تمام کاربران و فعال‌سازی پیش‌فرض اولین یوزر
         async function loadUsersDropdown() {
             const selector = document.getElementById("user-selector");
             try {
@@ -130,19 +138,17 @@
                         const opt = document.createElement("option");
                         opt.value = u.user_id;
                         opt.dataset.chatId = u.chat_id || u.user_id;
-                        opt.innerText = `${u.user_name || 'کاربر بدون نام'} (${u.user_id})`;
+                        opt.innerText = `${u.user_name || 'Unknown'} (${u.user_id})`;
                         selector.appendChild(opt);
                     });
-
-                    // 💡 تغییر کلیدی: انتخاب خودکار اولین کاربر لیست به صورت پیش‌فرض
                     selector.selectedIndex = 0;
                     handleUserChange();
                 } else {
-                    selector.innerHTML = "<option value=''>هیچ کاربری یافت نشد</option>";
+                    selector.innerHTML = "<option value=''>No users found</option>";
                 }
             } catch (err) {
                 console.error(err);
-                selector.innerHTML = "<option value=''>❌ خطا در دریافت کاربران</option>";
+                selector.innerHTML = "<option value=''>❌ Error loading users</option>";
             }
         }
 
@@ -154,57 +160,44 @@
             CURRENT_USER_ID = parseInt(selector.value);
             CURRENT_CHAT_ID = parseInt(selectedOption.dataset.chatId);
 
-            loadActiveSession();
-            loadCategories();
-            loadStatsReports();
+            refreshDashboardData();
         }
 
-        // ۲. خواندن تسک فعال
         async function loadActiveSession() {
-    if (!CURRENT_USER_ID) return;
-    const container = document.getElementById("active-task-status");
-    const actions = document.getElementById("active-task-actions");
+            if (!CURRENT_USER_ID) return;
+            const container = document.getElementById("active-task-status");
+            const actions = document.getElementById("active-task-actions");
 
-    try {
-        const { data, error } = await supabaseClient
-            .from('activities')
-            .select('*')
-            .eq('user_id', CURRENT_USER_ID)
-            .is('end_time', null)
-            .order('id', { ascending: false })
-            .limit(1);
+            try {
+                const { data, error } = await supabaseClient
+                    .from('activities')
+                    .select('*')
+                    .eq('user_id', CURRENT_USER_ID)
+                    .is('end_time', null)
+                    .order('id', { ascending: false })
+                    .limit(1);
 
-        if (error) throw error;
+                if (error) throw error;
 
-        if (data && data.length > 0) {
-            const current = data[0];
-            
-            // 💡 اصلاح اصلی: تبدیل هر دو زمان به فرمت UTC استاندارد برای حذف تداخل ساعت محلی
-            const startTime = new Date(current.start_time + "Z"); // اضافه کردن Z برای وادار کردن مرورگر به خواندن در حالت UTC
-            const now = new Date();
-            
-            // محاسبه تفاضل واقعی فارغ از ریجن دستگاه
-            const diffMs = now.getTime() - startTime.getTime();
-            let diffMins = Math.floor(diffMs / 60000);
-            
-            // اگر به خاطر هماهنگی ثانیه‌ها عدد منفی شد، صفر نشان داده شود
-            if (diffMins < 0) diffMins = 0;
-            
-            container.innerText = `${current.category} \n ${diffMins} دقیقه`;
-            container.className = "text-lg font-bold text-indigo-600 dark:text-indigo-400";
-            actions.classList.remove("hidden");
-        } else {
-            container.innerText = "💤 در حال حاضر هیچ تسکی فعال نیست.";
-            container.className = "text-lg font-medium text-gray-400";
-            actions.classList.add("hidden");
+                if (data && data.length > 0) {
+                    const current = data[0];
+                    const startTime = new Date(current.start_time + "Z");
+                    const diffMins = Math.floor((new Date() - startTime) / 60000);
+                    
+                    container.innerText = `Active: ${current.category} (${diffMins < 0 ? 0 : diffMins}m elapsed)`;
+                    container.className = "text-base font-bold text-indigo-600 dark:text-indigo-400";
+                    actions.classList.remove("hidden");
+                } else {
+                    container.innerText = "💤 Idle. No active task found.";
+                    container.className = "text-base font-medium text-gray-400";
+                    actions.classList.add("hidden");
+                }
+            } catch (err) {
+                console.error(err);
+                container.innerText = "❌ Connection error";
+            }
         }
-    } catch (err) {
-        console.error(err);
-        container.innerText = "❌ خطا در بارگذاری وضعیت";
-    }
-}
 
-        // ۳. لود کردن دکمه‌های دسته‌بندی
         async function loadCategories() {
             if (!CURRENT_USER_ID) return;
             const grid = document.getElementById("categories-grid");
@@ -223,7 +216,7 @@
 
                 cats.forEach(cat => {
                     const btn = document.createElement("button");
-                    btn.className = "bg-white dark:bg-[#121212] border border-gray-200 dark:border-[#2d2d2d] hover:bg-indigo-500 dark:hover:bg-indigo-600 hover:text-white text-gray-800 dark:text-gray-200 p-3 rounded-xl text-sm font-medium transition text-center truncate shadow-sm";
+                    btn.className = "bg-white dark:bg-[#121212] border border-gray-200 dark:border-[#2d2d2d] hover:bg-indigo-500 dark:hover:bg-indigo-600 hover:text-white text-gray-800 dark:text-gray-200 p-2.5 rounded-xl text-xs font-medium transition text-center truncate shadow-sm";
                     btn.innerText = cat;
                     btn.onclick = () => startNewTask(cat);
                     grid.appendChild(btn);
@@ -233,7 +226,6 @@
             }
         }
 
-        // ۴. دریافت و رندر دیتای گزارشات دوره‌ای به شکل تفکیک شده
         async function loadStatsReports() {
             if (!CURRENT_USER_ID) return;
 
@@ -241,17 +233,12 @@
             const weekDiv = document.getElementById("report-week");
             const monthDiv = document.getElementById("report-month");
 
-            dayDiv.innerHTML = "در حال محاسبه...";
-            weekDiv.innerHTML = "در حال محاسبه...";
-            monthDiv.innerHTML = "در حال محاسبه...";
-
             const now = new Date();
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
             const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
             const startOfMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
             try {
-                // دریافت کلیه تسک‌های ۳۰ روز اخیر کاربر که پایان یافته‌اند
                 const { data: activities, error } = await supabaseClient
                     .from('activities')
                     .select('category, start_time, duration_minutes')
@@ -268,31 +255,24 @@
                     });
                     
                     const keys = Object.keys(summary);
-                    if (keys.length === 0) return "<span class='text-gray-400 text-xs'>دیتایی ثبت نشده</span>";
+                    if (keys.length === 0) return "<span class='text-gray-400 text-xs'>No data logged</span>";
                     
                     return keys.map(cat => {
                         const h = Math.floor(summary[cat] / 60);
                         const m = summary[cat] % 60;
-                        const timeStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
-                        return `<div class="flex justify-between border-b border-gray-100 dark:border-[#2d2d2d] py-0.5 text-xs"><span>• ${cat}</span><span class="font-bold text-gray-500 dark:text-gray-400">${timeStr}</span></div>`;
+                        return `<div class="flex justify-between border-b border-gray-100 dark:border-[#2d2d2d] py-0.5 text-xs"><span>• ${cat}</span><span class="font-bold text-gray-500 dark:text-gray-400">${h > 0 ? h+'h '+m+'m' : m+'m'}</span></div>`;
                     }).join('');
                 };
 
-                // فیلتر کردن کلاینت‌ساید برای بهینه‌سازی تعداد ریکوئست‌ها
-                const dayActs = activities.filter(a => a.start_time >= startOfDay);
-                const weekActs = activities.filter(a => a.start_time >= startOfWeek);
-
-                dayDiv.innerHTML = processReport(dayActs);
-                weekDiv.innerHTML = processReport(weekActs);
+                dayDiv.innerHTML = processReport(activities.filter(a => a.start_time >= startOfDay));
+                weekDiv.innerHTML = processReport(activities.filter(a => a.start_time >= startOfWeek));
                 monthDiv.innerHTML = processReport(activities);
 
             } catch (err) {
                 console.error(err);
-                dayDiv.innerHTML = weekDiv.innerHTML = monthDiv.innerHTML = "❌ خطا در محاسبه";
             }
         }
 
-        // ۵. شروع تسک جدید
         async function startNewTask(category) {
             if (!CURRENT_USER_ID) return;
             const now = new Date().toISOString();
@@ -314,82 +294,102 @@
                     }
                 }
 
-                const { error } = await supabaseClient
+                await supabaseClient
                     .from('activities')
                     .insert([{ user_id: CURRENT_USER_ID, chat_id: CURRENT_CHAT_ID, category: category, start_time: now }]);
 
-                if (error) throw error;
-
-                loadActiveSession();
-                loadStatsReports();
+                refreshDashboardData();
             } catch (err) {
                 console.error(err);
             }
         }
 
-        // ۶. لغو تسک فعال
         async function cancelActiveTask() {
             if (!CURRENT_USER_ID) return;
             try {
-                const { error } = await supabaseClient
+                await supabaseClient
                     .from('activities')
                     .delete()
                     .eq('user_id', CURRENT_USER_ID)
                     .is('end_time', null);
 
-                if (error) throw error;
-                loadActiveSession();
-                loadStatsReports();
+                refreshDashboardData();
             } catch (err) {
                 console.error(err);
             }
         }
-        // ⚡ مکانیزم آپدیت هوشمند و فوق‌بهینه برای حفظ سلامت باتری
 
-let autoRefreshTimer = null;
-const REFRESH_INTERVAL = 60000; // آپدیت هر ۶۰ ثانیه یک‌بار (صرفه‌جویی در مصرف باتری)
+        // ⏱️ High-Efficiency Countdown Logic
+        function updateCountdowns() {
+            const now = new Date();
+            
+            // 1. Workday Countdown (Until 17:00:00)
+            const workEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0, 0);
+            let workDiff = workEnd - now;
+            if (workDiff < 0) workDiff = 0; // If past 17:00, freeze at 0
+            
+            // 2. Day Countdown (Until Midnight 24:00)
+            const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+            let dayDiff = dayEnd - now;
 
-// شروع تایمر فقط در صورتی که صفحه باز و جلوی چشم کاربر باشد
-function startSmartRefresh() {
-    if (autoRefreshTimer) return;
-    
-    autoRefreshTimer = setInterval(() => {
-        // فقط اگر کاربر در حال دیدن صفحه است ریکوئست بفرستد
-        if (document.visibilityState === 'visible') {
-            refreshDashboardData();
+            const formatTime = (ms) => {
+                const totalSecs = Math.floor(ms / 1000);
+                const hrs = String(Math.floor(totalSecs / 3600)).padStart(2, '0');
+                const mins = String(Math.floor((totalSecs % 3600) / 60)).padStart(2, '0');
+                const secs = String(totalSecs % 60).padStart(2, '0');
+                return `${hrs}:${mins}:${secs}`;
+            }
+
+            document.getElementById("countdown-work").innerText = formatTime(workDiff);
+            document.getElementById("countdown-day").innerText = formatTime(dayDiff);
         }
-    }, REFRESH_INTERVAL);
-}
 
-// توقف کامل تایمر برای به صفر رساندن مصرف پردازنده و شبکه در پس‌زمینه
-function stopSmartRefresh() {
-    if (autoRefreshTimer) {
-        clearInterval(autoRefreshTimer);
-        autoRefreshTimer = null;
-    }
-}
+        function startCountdowns() {
+            if (countdownTimer) return;
+            updateCountdowns();
+            countdownTimer = setInterval(updateCountdowns, 1000);
+        }
 
-// تابع کمکی برای آپدیت هم‌زمان تمام بخش‌ها
-function refreshDashboardData() {
-    if (!CURRENT_USER_ID) return;
-    loadActiveSession();
-    loadStatsReports();
-}
+        function stopCountdowns() {
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+        }
 
-// گوش به زنگ بودن برای تغییر وضعیت تب (باز شدن / رفتن به پس‌زمینه)
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-        // کاربر برگشت؛ فوراً آپدیت کن و تایمر را روشن کن
-        refreshDashboardData();
+        function refreshDashboardData() {
+            loadActiveSession();
+            loadCategories();
+            loadStatsReports();
+        }
+
+        // Smart Battery Management
+        function startSmartRefresh() {
+            if (autoRefreshTimer) return;
+            autoRefreshTimer = setInterval(() => {
+                if (document.visibilityState === 'visible') refreshDashboardData();
+            }, 60000);
+        }
+
+        function stopSmartRefresh() {
+            if (autoRefreshTimer) {
+                clearInterval(autoRefreshTimer);
+                autoRefreshTimer = null;
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                refreshDashboardData();
+                startSmartRefresh();
+                startCountdowns();
+            } else {
+                stopSmartRefresh();
+                stopCountdowns(); // Completely freezes engine processing when tab is hidden
+            }
+        });
+
         startSmartRefresh();
-    } else {
-        // کاربر رفت به یک تب دیگه؛ تایمر رو کاملاً بکش تا باتری مصرف نشه
-        stopSmartRefresh();
-    }
-});
-
-// فعال‌سازی اولیه مکانیزم در زمان اجرای اسکریپت
-startSmartRefresh();
     </script>
 </body>
 </html>
