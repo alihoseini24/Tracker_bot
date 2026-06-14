@@ -1,3 +1,10 @@
+این قابلیت دقیقاً با همان رویکرد مینیمال و پنهانی که مد نظرت بود پیاده شد.
+
+یک دکمه‌ی ادیت بسیار کوچک و کم‌پیدا (صرفاً به شکل متن کم‌رنگ `Edit History`) در پایین‌ترین نقطه صفحه (فوتر) قرار گرفته است. با کلیک روی آن، یک پاپ‌آپ مینیمال باز می‌شود که به صورت خودکار لیست تسک‌های اخیر کاربر انتخاب‌شده را مستقیماً از سوپابیس می‌کشد و به شما اجازه می‌دهد **دسته‌بندی**، **ساعت شروع** و **ساعت پایان** هر تسک را به راحتی ویرایش یا اصلاح کنید.
+
+کد کامل و یکپارچه‌شده‌ی زیر را جایگزین فایل خود کنید:
+
+```html
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
@@ -28,15 +35,16 @@
             animation: subtlePulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
 
-        /* Clean up default summary marker styling across browsers */
         summary::-webkit-details-marker { display: none; }
         summary { list-style: none; }
     </style>
 </head>
-<body class="bg-white text-gray-900 dark:bg-[#121212] dark:text-gray-100 min-h-screen p-4 transition-colors duration-200">
+<body class="bg-white text-gray-900 dark:bg-[#121212] dark:text-gray-100 min-h-screen p-4 transition-colors duration-200 flex flex-col justify-between">
 
-    <div class="max-w-md mx-auto space-y-4 pt-2">
+    <!-- Main Dashboard Container -->
+    <div class="max-w-md w-full mx-auto space-y-4 pt-2 flex-grow">
         
+        <!-- 1. Context Control Header -->
         <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4 shadow-sm flex items-center justify-between">
             <div class="flex items-center gap-2">
                 <select id="user-selector" onchange="handleUserChange()" class="bg-white dark:bg-[#121212] text-gray-900 dark:text-white border border-gray-200 dark:border-[#2d2d2d] rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none w-40">
@@ -50,6 +58,7 @@
             </button>
         </div>
         
+        <!-- 2. Timers Section -->
         <div class="grid grid-cols-2 gap-3 bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4 shadow-sm text-center">
             <div class="space-y-2 border-r border-gray-200 dark:border-[#2d2d2d] pr-2">
                 <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Workday End</p>
@@ -64,6 +73,568 @@
                 <div class="w-full bg-gray-200 dark:bg-[#2d2d2d] h-1 rounded-full overflow-hidden">
                     <div id="progress-day" class="bg-gray-400 dark:bg-gray-500 h-1 w-0 transition-all duration-1000 pulse-slow"></div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Active Monitor Status Block -->
+        <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-5 shadow-sm text-center space-y-4">
+            <div class="space-y-1">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Current Session</p>
+                <h2 id="active-task-status" class="text-xl font-bold tracking-tight text-gray-500">Select User</h2>
+                <p id="active-task-time" class="text-xs text-gray-400 font-medium h-4"></p>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="flex justify-center items-center gap-2 pt-2 border-t border-gray-100 dark:border-[#2d2d2d]">
+                <button onclick="openCategoriesModal()" class="flex-1 bg-gray-900 text-white dark:bg-white dark:text-gray-900 py-2 rounded-lg text-xs font-medium tracking-wide hover:opacity-90 transition">
+                    Start Task
+                </button>
+                <button id="btn-cancel" onclick="cancelActiveTask()" class="flex-1 hidden bg-gray-100 text-red-600 border border-gray-200 dark:bg-[#121212] dark:border-red-900/30 dark:text-red-400 py-2 rounded-lg text-xs font-medium tracking-wide hover:bg-red-50 dark:hover:bg-red-950/20 transition">
+                    Cancel Task
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. Performance Analytics Modules -->
+        <div class="space-y-2">
+            <details class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4 group" open>
+                <summary class="flex justify-between items-center cursor-pointer select-none">
+                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Today</span>
+                    <svg class="w-3 h-3 text-gray-400 dark:text-gray-500 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div id="report-day" class="text-[11px] text-gray-600 dark:text-gray-400 space-y-1 text-left font-medium mt-3"></div>
+            </details>
+
+            <details class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4 group">
+                <summary class="flex justify-between items-center cursor-pointer select-none">
+                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Last 7 Days</span>
+                    <svg class="w-3 h-3 text-gray-400 dark:text-gray-500 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div id="report-week" class="text-[11px] text-gray-600 dark:text-gray-400 space-y-1 text-left font-medium mt-3"></div>
+            </details>
+
+            <details class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4 group">
+                <summary class="flex justify-between items-center cursor-pointer select-none">
+                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Last 30 Days</span>
+                    <svg class="w-3 h-3 text-gray-400 dark:text-gray-500 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div id="report-month" class="text-[11px] text-gray-600 dark:text-gray-400 space-y-1 text-left font-medium mt-3"></div>
+            </details>
+        </div>
+    </div>
+
+    <!-- Hidden Subtle Footer Link -->
+    <div class="max-w-md w-full mx-auto text-center pt-8 pb-2">
+        <button onclick="openHistoryModal()" class="text-[10px] text-gray-300 dark:text-zinc-700 hover:text-gray-500 dark:hover:text-zinc-500 transition tracking-wider uppercase font-medium focus:outline-none">
+            Edit History
+        </button>
+    </div>
+
+    <!-- Category Entry Modal -->
+    <div id="categories-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end justify-center hidden" onclick="closeCategoriesModal()">
+        <div class="bg-white dark:bg-[#1e1e1e] border-t border-gray-200 dark:border-[#2d2d2d] w-full max-w-md rounded-t-2xl p-5 space-y-4 shadow-2xl transition-transform" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center border-b border-gray-100 dark:border-[#2d2d2d] pb-2">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Select New Target Task</h3>
+                <button onclick="closeCategoriesModal()" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-white font-medium">Dismiss</button>
+            </div>
+            <div id="categories-grid" class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1"></div>
+        </div>
+    </div>
+
+    <!-- Micro Subtle History Editor Modal -->
+    <div id="history-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden" onclick="closeHistoryModal()">
+        <div class="bg-white dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] w-full max-w-sm rounded-xl p-4 space-y-4 shadow-2xl" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center border-b border-gray-100 dark:border-[#2d2d2d] pb-2">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Modify Activity History</h3>
+                <button onclick="closeHistoryModal()" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-white">Close</button>
+            </div>
+            
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Select Session Record</label>
+                    <select id="history-item-selector" onchange="populateHistoryFields()" class="w-full bg-gray-50 dark:bg-[#121212] text-gray-900 dark:text-white border border-gray-200 dark:border-[#2d2d2d] rounded-lg p-2 focus:outline-none"></select>
+                </div>
+                
+                <div class="grid grid-cols-1 gap-2">
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Category Label</label>
+                        <input type="text" id="edit-history-category" class="w-full bg-gray-50 dark:bg-[#121212] border border-gray-200 dark:border-[#2d2d2d] rounded-lg p-2 focus:outline-none text-gray-800 dark:text-gray-200">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Start Timestamp (Local Time)</label>
+                        <input type="datetime-local" id="edit-history-start" class="w-full bg-gray-50 dark:bg-[#121212] border border-gray-200 dark:border-[#2d2d2d] rounded-lg p-2 focus:outline-none text-gray-800 dark:text-gray-200">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">End Timestamp (Local Time)</label>
+                        <input type="datetime-local" id="edit-history-end" class="w-full bg-gray-50 dark:bg-[#121212] border border-gray-200 dark:border-[#2d2d2d] rounded-lg p-2 focus:outline-none text-gray-800 dark:text-gray-200">
+                    </div>
+                </div>
+
+                <div class="pt-2 flex gap-2">
+                    <button onclick="submitHistoryUpdate()" class="flex-1 bg-gray-950 text-white dark:bg-white dark:text-gray-950 py-2 rounded-lg font-medium text-center hover:opacity-90 transition">
+                        Apply Changes
+                    </button>
+                    <button onclick="deleteHistoryItem()" class="px-3 bg-red-50 text-red-600 border border-red-100 dark:bg-red-950/20 dark:border-red-900/30 dark:text-red-400 rounded-lg hover:bg-red-100 transition">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://usvegeoutoudjxbsfdov.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_eyRouLDdaSGBOhxlbGezow_jhYlAPEO";
+
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let CURRENT_USER_ID = null;
+        let CURRENT_CHAT_ID = null;
+        let autoRefreshTimer = null;
+        let countdownTimer = null;
+        let loadedHistoryRecords = [];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            loadUsersDropdown();
+            startCountdowns();
+        });
+
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('color-theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('color-theme', 'dark');
+            }
+        }
+
+        function openCategoriesModal() {
+            if(!CURRENT_USER_ID) return;
+            document.getElementById("categories-modal").classList.remove("hidden");
+        }
+
+        function closeCategoriesModal() {
+            document.getElementById("categories-modal").classList.add("hidden");
+        }
+
+        function openHistoryModal() {
+            if(!CURRENT_USER_ID) return;
+            document.getElementById("history-modal").classList.remove("hidden");
+            fetchRecentHistory();
+        }
+
+        function closeHistoryModal() {
+            document.getElementById("history-modal").classList.add("hidden");
+        }
+
+        async function loadUsersDropdown() {
+            const selector = document.getElementById("user-selector");
+            try {
+                const { data: users, error } = await supabaseClient
+                    .from('users')
+                    .select('user_id, chat_id, user_name');
+
+                if (error) throw error;
+                selector.innerHTML = "";
+
+                if (users && users.length > 0) {
+                    users.forEach(u => {
+                        const opt = document.createElement("option");
+                        opt.value = u.user_id;
+                        opt.dataset.chatId = u.chat_id || u.user_id;
+                        opt.innerText = u.user_name || 'Anonymous';
+                        selector.appendChild(opt);
+                    });
+                    selector.selectedIndex = 0;
+                    handleUserChange();
+                } else {
+                    selector.innerHTML = "<option value=''>No Users</option>";
+                }
+            } catch (err) {
+                console.error(err);
+                selector.innerHTML = "<option value=''>Error</option>";
+            }
+        }
+
+        function handleUserChange() {
+            const selector = document.getElementById("user-selector");
+            if (!selector.value) return;
+
+            const selectedOption = selector.options[selector.selectedIndex];
+            CURRENT_USER_ID = parseInt(selector.value);
+            CURRENT_CHAT_ID = parseInt(selectedOption.dataset.chatId);
+
+            refreshDashboardData();
+        }
+
+        async function loadActiveSession() {
+            if (!CURRENT_USER_ID) return;
+            const container = document.getElementById("active-task-status");
+            const timeContainer = document.getElementById("active-task-time");
+            const cancelBtn = document.getElementById("btn-cancel");
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('activities')
+                    .select('*')
+                    .eq('user_id', CURRENT_USER_ID)
+                    .is('end_time', null)
+                    .order('id', { ascending: false })
+                    .limit(1);
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    const current = data[0];
+                    const startTime = new Date(current.start_time + "Z");
+                    const diffMins = Math.floor((new Date() - startTime) / 60000);
+                    
+                    container.innerText = current.category;
+                    container.className = "text-xl font-bold tracking-tight text-indigo-600 dark:text-indigo-400";
+                    timeContainer.innerText = `${diffMins < 0 ? 0 : diffMins}m elapsed`;
+                    cancelBtn.classList.remove("hidden");
+                } else {
+                    container.innerText = "Idle";
+                    container.className = "text-xl font-bold tracking-tight text-gray-400 dark:text-gray-600";
+                    timeContainer.innerText = "";
+                    cancelBtn.classList.add("hidden");
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function loadCategories() {
+            if (!CURRENT_USER_ID) return;
+            const grid = document.getElementById("categories-grid");
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('categories')
+                    .select('category')
+                    .eq('user_id', CURRENT_USER_ID);
+
+                if (error) throw error;
+                grid.innerHTML = "";
+                
+                const defaultCats = ["Study", "Meal", "Snack", "Grocery", "Movie/Series", "Commute", "Exercises", "Sleep"];
+                const cats = (data && data.length > 0) ? data.map(r => r.category) : defaultCats;
+
+                cats.forEach(cat => {
+                    const btn = document.createElement("button");
+                    btn.className = "bg-gray-50 dark:bg-[#121212] border border-gray-200 dark:border-[#2d2d2d] hover:bg-gray-100 dark:hover:bg-neutral-800 text-gray-800 dark:text-gray-200 p-2.5 rounded-lg text-xs font-medium transition text-center truncate";
+                    btn.innerText = cat;
+                    btn.onclick = () => {
+                        startNewTask(cat);
+                        closeCategoriesModal();
+                    };
+                    grid.appendChild(btn);
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function loadStatsReports() {
+            if (!CURRENT_USER_ID) return;
+
+            const dayDiv = document.getElementById("report-day");
+            const weekDiv = document.getElementById("report-week");
+            const monthDiv = document.getElementById("report-month");
+
+            const now = new Date();
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+            const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+            const startOfMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+            try {
+                const { data: activities, error } = await supabaseClient
+                    .from('activities')
+                    .select('category, start_time, duration_minutes')
+                    .eq('user_id', CURRENT_USER_ID)
+                    .not('duration_minutes', 'is', null)
+                    .gte('start_time', startOfMonth);
+
+                if (error) throw error;
+
+                const processReport = (filteredActs) => {
+                    const summary = {};
+                    filteredActs.forEach(act => {
+                        summary[act.category] = (summary[act.category] || 0) + act.duration_minutes;
+                    });
+                    
+                    const keys = Object.keys(summary);
+                    if (keys.length === 0) return "<span class='text-gray-400 dark:text-gray-600 text-[10px]'>Empty</span>";
+                    
+                    return keys.map(cat => {
+                        const h = Math.floor(summary[cat] / 60);
+                        const m = summary[cat] % 60;
+                        return `<div class="flex justify-between border-b border-gray-100 dark:border-[#2d2d2d] py-0.5 max-w-xs"><span class="truncate pr-1">• ${cat}</span><span class="font-bold shrink-0">${h > 0 ? h+'h '+m+'m' : m+'m'}</span></div>`;
+                    }).join('');
+                };
+
+                dayDiv.innerHTML = processReport(activities.filter(a => a.start_time >= startOfDay));
+                weekDiv.innerHTML = processReport(activities.filter(a => a.start_time >= startOfWeek));
+                monthDiv.innerHTML = processReport(activities);
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function startNewTask(category) {
+            if (!CURRENT_USER_ID) return;
+            const now = new Date().toISOString();
+            
+            try {
+                const { data: activeTasks } = await supabaseClient
+                    .from('activities')
+                    .select('id, start_time')
+                    .eq('user_id', CURRENT_USER_ID)
+                    .is('end_time', null);
+
+                if (activeTasks && activeTasks.length > 0) {
+                    for (const task of activeTasks) {
+                        const startTimeUTC = new Date(task.start_time + "Z");
+                        const duration = Math.floor((new Date() - startTimeUTC) / 60000);
+                        
+                        await supabaseClient
+                            .from('activities')
+                            .update({ end_time: now, duration_minutes: duration < 0 ? 0 : duration })
+                            .eq('id', task.id);
+                    }
+                }
+
+                await supabaseClient
+                    .from('activities')
+                    .insert([{ user_id: CURRENT_USER_ID, chat_id: CURRENT_CHAT_ID, category: category, start_time: now }]);
+
+                refreshDashboardData();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function cancelActiveTask() {
+            if (!CURRENT_USER_ID) return;
+            try {
+                await supabaseClient
+                    .from('activities')
+                    .delete()
+                    .eq('user_id', CURRENT_USER_ID)
+                    .is('end_time', null);
+
+                refreshDashboardData();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // --- History Editor Core Engine Logic ---
+        async function fetchRecentHistory() {
+            const selector = document.getElementById("history-item-selector");
+            selector.innerHTML = "<option>Loading records...</option>";
+            try {
+                const { data, error } = await supabaseClient
+                    .from('activities')
+                    .select('*')
+                    .eq('user_id', CURRENT_USER_ID)
+                    .order('start_time', { ascending: false })
+                    .limit(15);
+
+                if (error) throw error;
+                loadedHistoryRecords = data || [];
+                selector.innerHTML = "";
+
+                if (loadedHistoryRecords.length === 0) {
+                    selector.innerHTML = "<option>No items found</option>";
+                    return;
+                }
+
+                loadedHistoryRecords.forEach((item, index) => {
+                    const opt = document.createElement("option");
+                    opt.value = index;
+                    const dateObj = new Date(item.start_time + "Z");
+                    const dateStr = dateObj.toLocaleDateString([], {month:'short', day:'numeric'});
+                    const timeStr = dateObj.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false});
+                    opt.innerText = `${dateStr} ${timeStr} - ${item.category}`;
+                    selector.appendChild(opt);
+                });
+
+                populateHistoryFields();
+            } catch(err) {
+                console.error(err);
+                selector.innerHTML = "<option>Error loading logs</option>";
+            }
+        }
+
+        function toLocalISOString(date) {
+            const tzoffset = date.getTimezoneOffset() * 60000;
+            return (new Date(date.getTime() - tzoffset)).toISOString().slice(0, 16);
+        }
+
+        function populateHistoryFields() {
+            const index = document.getElementById("history-item-selector").value;
+            const record = loadedHistoryRecords[index];
+            if (!record) return;
+
+            document.getElementById("edit-history-category").value = record.category || "";
+            
+            if (record.start_time) {
+                document.getElementById("edit-history-start").value = toLocalISOString(new Date(record.start_time + "Z"));
+            } else {
+                document.getElementById("edit-history-start").value = "";
+            }
+
+            if (record.end_time) {
+                document.getElementById("edit-history-end").value = toLocalISOString(new Date(record.end_time + "Z"));
+            } else {
+                document.getElementById("edit-history-end").value = "";
+            }
+        }
+
+        async function submitHistoryUpdate() {
+            const index = document.getElementById("history-item-selector").value;
+            const record = loadedHistoryRecords[index];
+            if (!record) return;
+
+            const category = document.getElementById("edit-history-category").value;
+            const startVal = document.getElementById("edit-history-start").value;
+            const endVal = document.getElementById("edit-history-end").value;
+
+            if (!category || !startVal) return;
+
+            const start_time = new Date(startVal).toISOString();
+            let end_time = null;
+            let duration_minutes = null;
+
+            if (endVal) {
+                end_time = new Date(endVal).toISOString();
+                duration_minutes = Math.floor((new Date(endVal) - new Date(startVal)) / 60000);
+                if (duration_minutes < 0) duration_minutes = 0;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('activities')
+                    .update({ category, start_time, end_time, duration_minutes })
+                    .eq('id', record.id);
+
+                if (error) throw error;
+                closeHistoryModal();
+                refreshDashboardData();
+            } catch(err) {
+                console.error(err);
+            }
+        }
+
+        async function deleteHistoryItem() {
+            const index = document.getElementById("history-item-selector").value;
+            const record = loadedHistoryRecords[index];
+            if (!record || !confirm("Delete this record permanently?")) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('activities')
+                    .delete()
+                    .eq('id', record.id);
+
+                if (error) throw error;
+                closeHistoryModal();
+                refreshDashboardData();
+            } catch(err) {
+                console.error(err);
+            }
+        }
+
+        // --- Standard Timers Engine Logic ---
+        function updateCountdowns() {
+            const now = new Date();
+            
+            const workStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0);
+            const workEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0, 0);
+            let workDiff = workEnd - now;
+            if (workDiff < 0) workDiff = 0;
+            
+            const totalWorkMs = workEnd - workStart;
+            const currentWorkElapsed = now - workStart;
+            let workPct = (currentWorkElapsed / totalWorkMs) * 100;
+            if (workPct < 0) workPct = 0;
+            if (workPct > 100 || workDiff === 0) workPct = 100;
+            document.getElementById("progress-work").style.width = `${workPct}%`;
+
+            const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+            const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+            let dayDiff = dayEnd - now;
+            
+            const totalDayMs = 24 * 60 * 60 * 1000;
+            const currentDayElapsed = now - dayStart;
+            const dayPct = (currentDayElapsed / totalDayMs) * 100;
+            document.getElementById("progress-day").style.width = `${dayPct}%`;
+
+            const formatTime = (ms) => {
+                const totalSecs = Math.floor(ms / 1000);
+                const hrs = String(Math.floor(totalSecs / 3600)).padStart(2, '0');
+                const mins = String(Math.floor((totalSecs % 3600) / 60)).padStart(2, '0');
+                const secs = String(totalSecs % 60).padStart(2, '0');
+                return `${hrs}:${mins}:${secs}`;
+            }
+
+            document.getElementById("countdown-work").innerText = formatTime(workDiff);
+            document.getElementById("countdown-day").innerText = formatTime(dayDiff);
+        }
+
+        function startCountdowns() {
+            if (countdownTimer) return;
+            updateCountdowns();
+            countdownTimer = setInterval(updateCountdowns, 1000);
+        }
+
+        function stopCountdowns() {
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+        }
+
+        function refreshDashboardData() {
+            loadActiveSession();
+            loadCategories();
+            loadStatsReports();
+        }
+
+        function startSmartRefresh() {
+            if (autoRefreshTimer) return;
+            autoRefreshTimer = setInterval(() => {
+                if (document.visibilityState === 'visible') refreshDashboardData();
+            }, 60000);
+        }
+
+        function stopSmartRefresh() {
+            if (autoRefreshTimer) {
+                clearInterval(autoRefreshTimer);
+                autoRefreshTimer = null;
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                refreshDashboardData();
+                startSmartRefresh();
+                startCountdowns();
+            } else {
+                stopSmartRefresh();
+                stopCountdowns();
+            }
+        });
+
+        startSmartRefresh();
+    </script>
+</body>
+</html>
+
+```                </div>
             </div>
         </div>
 
