@@ -8,7 +8,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
     <script>
-        tailwind.config = { darkMode: 'class' }
+        tailwind.config = { 
+            darkMode: 'class'
+        }
         if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
         } else {
@@ -17,28 +19,20 @@
     </script>
     <style>
         body { font-family: 'Vazirmatn', sans-serif; }
+        
+        /* Smooth, battery-optimized slow blinking effect for progress bars */
+        @keyframes subtlePulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .pulse-slow {
+            animation: subtlePulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
     </style>
 </head>
 <body class="bg-white text-gray-900 dark:bg-[#121212] dark:text-gray-100 min-h-screen p-4 transition-colors duration-200">
 
     <div class="max-w-md mx-auto space-y-4 pt-2">
-        
-        <div class="grid grid-cols-2 gap-3 bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4 shadow-sm text-center">
-            <div class="space-y-2 border-r border-gray-200 dark:border-[#2d2d2d] pr-2">
-                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Workday End</p>
-                <p id="countdown-work" class="text-lg font-bold font-mono text-gray-800 dark:text-gray-200">00:00:00</p>
-                <div class="w-full bg-gray-200 dark:bg-[#2d2d2d] h-1 rounded-full overflow-hidden">
-                    <div id="progress-work" class="bg-gray-400 dark:bg-gray-500 h-1 w-0 transition-all duration-1000"></div>
-                </div>
-            </div>
-            <div class="space-y-2 pl-2">
-                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Day End</p>
-                <p id="countdown-day" class="text-lg font-bold font-mono text-gray-800 dark:text-gray-200">00:00:00</p>
-                <div class="w-full bg-gray-200 dark:bg-[#2d2d2d] h-1 rounded-full overflow-hidden">
-                    <div id="progress-day" class="bg-gray-400 dark:bg-gray-500 h-1 w-0 transition-all duration-1000"></div>
-                </div>
-            </div>
-        </div>
         
         <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4 shadow-sm flex items-center justify-between">
             <div class="flex items-center gap-2">
@@ -51,6 +45,23 @@
                 <svg id="theme-icon-dark" class="hidden dark:block w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 9H3m15.364-3.364l-.707.707M6.343 17.657l-.707.707M16.243 17.657l.707.707M6.343 6.343l.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z"/></svg>
                 <svg id="theme-icon-light" class="block dark:hidden w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
             </button>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3 bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4 shadow-sm text-center">
+            <div class="space-y-2 border-r border-gray-200 dark:border-[#2d2d2d] pr-2">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Workday End</p>
+                <p id="countdown-work" class="text-lg font-normal font-mono text-gray-800 dark:text-gray-200">00:00:00</p>
+                <div class="w-full bg-gray-200 dark:bg-[#2d2d2d] h-1 rounded-full overflow-hidden">
+                    <div id="progress-work" class="bg-gray-400 dark:bg-gray-500 h-1 w-0 transition-all duration-1000 pulse-slow"></div>
+                </div>
+            </div>
+            <div class="space-y-2 pl-2">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Day End</p>
+                <p id="countdown-day" class="text-lg font-normal font-mono text-gray-800 dark:text-gray-200">00:00:00</p>
+                <div class="w-full bg-gray-200 dark:bg-[#2d2d2d] h-1 rounded-full overflow-hidden">
+                    <div id="progress-day" class="bg-gray-400 dark:bg-gray-500 h-1 w-0 transition-all duration-1000 pulse-slow"></div>
+                </div>
+            </div>
         </div>
 
         <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-5 shadow-sm text-center space-y-4">
@@ -70,17 +81,17 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-2 text-center">
-            <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-3">
+        <div class="space-y-2">
+            <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4">
                 <div class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-2">Today</div>
                 <div id="report-day" class="text-[11px] text-gray-600 dark:text-gray-400 space-y-1 text-left font-medium"></div>
             </div>
-            <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-3">
-                <div class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-2">7 Days</div>
+            <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4">
+                <div class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-2">Last 7 Days</div>
                 <div id="report-week" class="text-[11px] text-gray-600 dark:text-gray-400 space-y-1 text-left font-medium"></div>
             </div>
-            <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-3">
-                <div class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-2">30 Days</div>
+            <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4">
+                <div class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-2">Last 30 Days</div>
                 <div id="report-month" class="text-[11px] text-gray-600 dark:text-gray-400 space-y-1 text-left font-medium"></div>
             </div>
         </div>
@@ -148,7 +159,6 @@
                         const opt = document.createElement("option");
                         opt.value = u.user_id;
                         opt.dataset.chatId = u.chat_id || u.user_id;
-                        // Extracted Name string safely without appending ugly bracket strings
                         opt.innerText = u.user_name || 'Anonymous';
                         selector.appendChild(opt);
                     });
@@ -196,7 +206,6 @@
                     const startTime = new Date(current.start_time + "Z");
                     const diffMins = Math.floor((new Date() - startTime) / 60000);
                     
-                    // Removed dynamic descriptive syntax text block values & emojis
                     container.innerText = current.category;
                     container.className = "text-xl font-bold tracking-tight text-indigo-600 dark:text-indigo-400";
                     timeContainer.innerText = `${diffMins < 0 ? 0 : diffMins}m elapsed`;
@@ -277,7 +286,7 @@
                     return keys.map(cat => {
                         const h = Math.floor(summary[cat] / 60);
                         const m = summary[cat] % 60;
-                        return `<div class="flex justify-between border-b border-gray-100 dark:border-[#2d2d2d] py-0.5"><span class="truncate pr-1">${cat}</span><span class="font-bold shrink-0">${h > 0 ? h+'h' : m+'m'}</span></div>`;
+                        return `<div class="flex justify-between border-b border-gray-100 dark:border-[#2d2d2d] py-0.5 max-w-xs"><span class="truncate pr-1">• ${cat}</span><span class="font-bold shrink-0">${h > 0 ? h+'h '+m+'m' : m+'m'}</span></div>`;
                     }).join('');
                 };
 
@@ -339,13 +348,12 @@
         function updateCountdowns() {
             const now = new Date();
             
-            // 1. Workday End Tracking (Target 17:00:00)
+            // 1. Workday Progress Track
             const workStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0);
             const workEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0, 0);
             let workDiff = workEnd - now;
             if (workDiff < 0) workDiff = 0;
             
-            // Update Workday Progress Bar
             const totalWorkMs = workEnd - workStart;
             const currentWorkElapsed = now - workStart;
             let workPct = (currentWorkElapsed / totalWorkMs) * 100;
@@ -353,12 +361,11 @@
             if (workPct > 100 || workDiff === 0) workPct = 100;
             document.getElementById("progress-work").style.width = `${workPct}%`;
 
-            // 2. Midnight Day End Tracking
+            // 2. Day Progress Track
             const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
             const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
             let dayDiff = dayEnd - now;
             
-            // Update Day End Progress Bar
             const totalDayMs = 24 * 60 * 60 * 1000;
             const currentDayElapsed = now - dayStart;
             const dayPct = (currentDayElapsed / totalDayMs) * 100;
