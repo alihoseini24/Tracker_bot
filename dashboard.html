@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پنل مدیریت تمرکز پویا</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Vazirmatn', sans-serif; }
+    </style>
+</head>
+<body class="bg-[#17212b] text-[#f5f5f5] min-h-screen p-4 md:p-8">
+
+    <div class="max-w-2xl mx-auto space-y-6">
+        <div class="bg-[#242f3d] border border-[#2f3e50] rounded-2xl p-6 shadow-lg text-center space-y-4">
+            <div>
+                <h1 class="text-2xl font-bold text-[#2481cc]">🎯 داشبورد مدیریت تمرکز</h1>
+                <p class="text-sm text-[#708499] mt-1">مشاهده و مدیریت وضعیت کاربران دیتابیس</p>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-3 bg-[#17212b] p-3 rounded-xl border border-[#2f3e50]">
+                <label for="user-selector" class="text-sm font-medium text-gray-400">انتخاب کاربر فعلی:</label>
+                <select id="user-selector" onchange="handleUserChange()" class="bg-[#242f3d] text-white border border-[#2f3e50] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#2481cc] w-full sm:w-64">
+                    <option value="">در حال بارگذاری کاربران...</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="bg-[#242f3d] border border-[#2f3e50] rounded-2xl p-6 shadow-lg">
+            <h2 class="text-lg font-bold text-gray-300 mb-4 flex items-center gap-2">
+                <span class="flex h-3 w-3 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                </span>
+                وضعیت تسک فعلی
+            </h2>
+            <div id="active-task-container" class="bg-[#17212b] rounded-xl p-4 border border-[#2f3e50] text-center">
+                <p id="active-task-status" class="text-lg font-medium text-gray-400">لطفاً ابتدا یک کاربر را انتخاب کنید.</p>
+                <div id="active-task-actions" class="mt-4 flex justify-center gap-3 hidden">
+                    <button onclick="cancelActiveTask()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">❌ لغو تسک</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-[#242f3d] border border-[#2f3e50] rounded-2xl p-6 shadow-lg">
+            <h2 class="text-lg font-bold text-gray-300 mb-4">🚀 شروع تسک جدید</h2>
+            <div id="categories-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURATION - مقادیر سوپابیس خودت را اینجا وارد کن
+        const SUPABASE_URL = "https://usvegeoutoudjxbsfdov.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_eyRouLDdaSGBOhxlbGezow_jhYlAPEO";
+
+        // اتصال به سوپابیس
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // متغیر جهانی برای ذخیره کاربر انتخاب شده فعلی
+        let CURRENT_USER_ID = null;
+        let CURRENT_CHAT_ID = null;
+
+        // اجرای اولیه هنگام لود صفحه
+        document.addEventListener("DOMContentLoaded", () => {
+            loadUsersDropdown();
+        });
+
+        // ۱. لود کردن لیست تمام کاربران در دراپ‌داون بالای صفحه
+        async function loadUsersDropdown() {
+            const selector = document.getElementById("user-selector");
+            try {
+                const { data: users, error } = await supabase
+                    .from('users')
+                    .select('user_id, chat_id, user_name');
+
+                if (error) throw error;
+
+                selector.innerHTML = "";
+
+                if (users && users.length > 0) {
+                    // ایجاد یک گزینه پیش‌فرض خالی
+                    const defaultOpt = document.createElement("option");
+                    defaultOpt.value = "";
+                    defaultOpt.innerText = "یک کاربر را انتخاب کنید...";
+                    selector.appendChild(defaultOpt);
+
+                    users.forEach(u => {
+                        const opt = document.createElement("option");
+                        opt.value = u.user_id;
+                        opt.dataset.chatId = u.chat_id || u.user_id;
+                        // نمایش نام به همراه آیدی برای تشخیص دقیق‌تر
+                        opt.innerText = `${u.user_name || 'کاربر بدون نام'} (${u.user_id})`;
+                        selector.appendChild(opt);
+                    });
+                } else {
+                    selector.innerHTML = "<option value=''>هیچ کاربری در دیتابیس یافت نشد</option>";
+                }
+            } catch (err) {
+                console.error(err);
+                selector.innerHTML = "<option value=''>❌ خطا در دریافت لیست کاربران</option>";
+            }
+        }
+
+        // ۲. هندل کردن تغییر کاربر در منو
+        function handleUserChange() {
+            const selector = document.getElementById("user-selector");
+            const selectedOption = selector.options[selector.selectedIndex];
+            
+            if (!selector.value) {
+                CURRENT_USER_ID = null;
+                CURRENT_CHAT_ID = null;
+                document.getElementById("active-task-status").innerText = "لطفاً ابتدا یک کاربر را انتخاب کنید.";
+                document.getElementById("active-task-status").className = "text-lg font-medium text-gray-400";
+                document.getElementById("active-task-actions").classList.add("hidden");
+                document.getElementById("categories-grid").innerHTML = "";
+                return;
+            }
+
+            CURRENT_USER_ID = parseInt(selector.value);
+            CURRENT_CHAT_ID = parseInt(selectedOption.dataset.chatId);
+
+            // لود مجدد اطلاعات اختصاصی کاربر انتخاب شده
+            loadActiveSession();
+            loadCategories();
+        }
+
+        // ۳. خواندن تسک فعال کاربر انتخاب شده
+        async function loadActiveSession() {
+            if (!CURRENT_USER_ID) return;
+            
+            const container = document.getElementById("active-task-status");
+            const actions = document.getElementById("active-task-actions");
+            container.innerText = "در حال بارگذاری وضعیت...";
+
+            try {
+                const { data, error } = await supabase
+                    .from('activities')
+                    .select('*')
+                    .eq('user_id', CURRENT_USER_ID)
+                    .is('end_time', null)
+                    .order('id', { ascending: false })
+                    .limit(1);
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    const current = data[0];
+                    const startTime = new Date(current.start_time);
+                    const diffMs = new Date() - startTime;
+                    const diffMins = Math.floor(diffMs / 60000);
+                    
+                    container.innerText = `👤 در حال انجام: ${current.category} (${diffMins} دقیقه گذشته)`;
+                    container.className = "text-lg font-bold text-[#2481cc]";
+                    actions.classList.remove("hidden");
+                } else {
+                    container.innerText = "💤 در حال حاضر هیچ تسکی فعال نیست.";
+                    container.className = "text-lg font-medium text-gray-400";
+                    actions.classList.add("hidden");
+                }
+            } catch (err) {
+                console.error(err);
+                container.innerText = "❌ خطا در بارگذاری وضعیت";
+            }
+        }
+
+        // ۴. لود کردن دکمه‌های دسته‌بندی اختصاصی کاربر انتخاب شده
+        async function loadCategories() {
+            if (!CURRENT_USER_ID) return;
+
+            const grid = document.getElementById("categories-grid");
+            grid.innerHTML = "<p class='text-gray-400 text-sm col-span-full text-center'>در حال بارگذاری دسته‌بندی‌ها...</p>";
+            
+            try {
+                const { data, error } = await supabase
+                    .from('categories')
+                    .select('category')
+                    .eq('user_id', CURRENT_USER_ID);
+
+                if (error) throw error;
+
+                grid.innerHTML = "";
+                
+                // لیست پیش‌فرض ربات در صورت عدم وجود دسته‌بندی سفارشی در دیتابیس
+                const defaultCats = ["Study", "Meal", "Snack", "Grocery", "Movie/Series", "Commute", "Exercises", "Sleep"];
+                const cats = (data && data.length > 0) ? data.map(r => r.category) : defaultCats;
+
+                cats.forEach(cat => {
+                    const btn = document.createElement("button");
+                    btn.className = "bg-[#2f3e50] hover:bg-[#2481cc] text-white p-3 rounded-xl text-sm font-medium transition text-center truncate shadow";
+                    btn.innerText = cat;
+                    btn.onclick = () => startNewTask(cat);
+                    grid.appendChild(btn);
+                });
+            } catch (err) {
+                console.error(err);
+                grid.innerHTML = "<p class='text-red-500 text-sm col-span-full text-center'>خطا در دریافت دسته‌بندی‌ها</p>";
+            }
+        }
+
+        // ۵. شروع یک تسک جدید برای کاربر انتخاب شده
+        async function startNewTask(category) {
+            if (!CURRENT_USER_ID) return;
+            const now = new Date().toISOString();
+            
+            try {
+                // الف) بستن تسک قبلی کاربر
+                const { data: activeTasks } = await supabase
+                    .from('activities')
+                    .select('id, start_time')
+                    .eq('user_id', CURRENT_USER_ID)
+                    .is('end_time', null);
+
+                if (activeTasks && activeTasks.length > 0) {
+                    for (const task of activeTasks) {
+                        const duration = Math.floor((new Date() - new Date(task.start_time)) / 60000);
+                        await supabase
+                            .from('activities')
+                            .update({ end_time: now, duration_minutes: duration })
+                            .eq('id', task.id);
+                    }
+                }
+
+                // ب) ایجاد رکورد جدید تسک
+                const { error } = await supabase
+                    .from('activities')
+                    .insert([{ 
+                        user_id: CURRENT_USER_ID, 
+                        chat_id: CURRENT_CHAT_ID, 
+                        category: category, 
+                        start_time: now 
+                    }]);
+
+                if (error) throw error;
+
+                loadActiveSession();
+            } catch (err) {
+                alert("خطا در شروع تسک جدید");
+                console.error(err);
+            }
+        }
+
+        // ۶. لغو تسک فعلی کاربر انتخاب شده
+        async function cancelActiveTask() {
+            if (!CURRENT_USER_ID) return;
+            
+            try {
+                const { error } = await supabase
+                    .from('activities')
+                    .delete()
+                    .eq('user_id', CURRENT_USER_ID)
+                    .is('end_time', null);
+
+                if (error) throw error;
+                loadActiveSession();
+            } catch (err) {
+                alert("خطا در لغو تسک");
+                console.error(err);
+            }
+        }
+    </script>
+</body>
+</html>
