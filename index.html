@@ -161,39 +161,48 @@
 
         // ۲. خواندن تسک فعال
         async function loadActiveSession() {
-            if (!CURRENT_USER_ID) return;
-            const container = document.getElementById("active-task-status");
-            const actions = document.getElementById("active-task-actions");
+    if (!CURRENT_USER_ID) return;
+    const container = document.getElementById("active-task-status");
+    const actions = document.getElementById("active-task-actions");
 
-            try {
-                const { data, error } = await supabaseClient
-                    .from('activities')
-                    .select('*')
-                    .eq('user_id', CURRENT_USER_ID)
-                    .is('end_time', null)
-                    .order('id', { ascending: false })
-                    .limit(1);
+    try {
+        const { data, error } = await supabaseClient
+            .from('activities')
+            .select('*')
+            .eq('user_id', CURRENT_USER_ID)
+            .is('end_time', null)
+            .order('id', { ascending: false })
+            .limit(1);
 
-                if (error) throw error;
+        if (error) throw error;
 
-                if (data && data.length > 0) {
-                    const current = data[0];
-                    const startTime = new Date(current.start_time);
-                    const diffMins = Math.floor((new Date() - startTime) / 60000);
-                    
-                    container.innerText = `👤 در حال انجام: ${current.category} (${diffMins} دقیقه گذشته)`;
-                    container.className = "text-lg font-bold text-indigo-600 dark:text-indigo-400";
-                    actions.classList.remove("hidden");
-                } else {
-                    container.innerText = "💤 در حال حاضر هیچ تسکی فعال نیست.";
-                    container.className = "text-lg font-medium text-gray-400";
-                    actions.classList.add("hidden");
-                }
-            } catch (err) {
-                console.error(err);
-                container.innerText = "❌ خطا در بارگذاری وضعیت";
-            }
+        if (data && data.length > 0) {
+            const current = data[0];
+            
+            // 💡 اصلاح اصلی: تبدیل هر دو زمان به فرمت UTC استاندارد برای حذف تداخل ساعت محلی
+            const startTime = new Date(current.start_time + "Z"); // اضافه کردن Z برای وادار کردن مرورگر به خواندن در حالت UTC
+            const now = new Date();
+            
+            // محاسبه تفاضل واقعی فارغ از ریجن دستگاه
+            const diffMs = now.getTime() - startTime.getTime();
+            let diffMins = Math.floor(diffMs / 60000);
+            
+            // اگر به خاطر هماهنگی ثانیه‌ها عدد منفی شد، صفر نشان داده شود
+            if (diffMins < 0) diffMins = 0;
+            
+            container.innerText = `👤 در حال انجام: ${current.category} (${diffMins} دقیقه گذشته)`;
+            container.className = "text-lg font-bold text-indigo-600 dark:text-indigo-400";
+            actions.classList.remove("hidden");
+        } else {
+            container.innerText = "💤 در حال حاضر هیچ تسکی فعال نیست.";
+            container.className = "text-lg font-medium text-gray-400";
+            actions.classList.add("hidden");
         }
+    } catch (err) {
+        console.error(err);
+        container.innerText = "❌ خطا در بارگذاری وضعیت";
+    }
+}
 
         // ۳. لود کردن دکمه‌های دسته‌بندی
         async function loadCategories() {
