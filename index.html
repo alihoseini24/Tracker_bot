@@ -313,26 +313,39 @@
             }
         }
 
-        async function startNewTask(category) {
-            if (!CURRENT_USER_ID) return;
-            const now = new Date().toISOString();
-            
-            try {
-                const { data: activeTasks } = await supabaseClient
-                    .from('activities')
-                    .select('id, start_time')
-                    .eq('user_id', CURRENT_USER_ID)
-                    .is('end_time', null);
+async function startNewTask(category) {
+    if (!CURRENT_USER_ID) return;
+    const now = new Date().toISOString();
+    
+    try {
+        const { data: activeTasks } = await supabaseClient
+            .from('activities')
+            .select('id, start_time')
+            .eq('user_id', CURRENT_USER_ID)
+            .is('end_time', null);
 
-                if (activeTasks && activeTasks.length > 0) {
-                    for (const task of activeTasks) {
-                        const duration = Math.floor((new Date() - new Date(task.start_time)) / 60000);
-                        await supabaseClient
-                            .from('activities')
-                            .update({ end_time: now, duration_minutes: duration })
-                            .eq('id', task.id);
-                    }
-                }
+        if (activeTasks && activeTasks.length > 0) {
+            for (const task of activeTasks) {
+                // 💡 اصلاح اصلی: اضافه کردن "Z" برای وادار کردن مرورگر به محاسبه تفاضل بر اساس UTC استاندارد
+                const startTimeUTC = new Date(task.start_time + "Z");
+                const duration = Math.floor((new Date() - startTimeUTC) / 60000);
+                
+                await supabaseClient
+                    .from('activities')
+                    .update({ end_time: now, duration_minutes: duration < 0 ? 0 : duration })
+                    .eq('id', task.id);
+            }
+        }
+
+        await supabaseClient
+            .from('activities')
+            .insert([{ user_id: CURRENT_USER_ID, chat_id: CURRENT_CHAT_ID, category: category, start_time: now }]);
+
+        refreshDashboardData();
+    } catch (err) {
+        console.error(err);
+    }
+}
 
                 await supabaseClient
                     .from('activities')
