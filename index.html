@@ -57,7 +57,7 @@
         const SUPABASE_ANON_KEY = "sb_secret_iVkYCOogaTfhf2LZrCCw-A_q22Dsxr8";
 
         // اتصال به سوپابیس
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // متغیر جهانی برای ذخیره کاربر انتخاب شده فعلی
         let CURRENT_USER_ID = null;
@@ -72,7 +72,7 @@
         async function loadUsersDropdown() {
             const selector = document.getElementById("user-selector");
             try {
-                const { data: users, error } = await supabase
+                const { data: users, error } = await supabaseClient
                     .from('users')
                     .select('user_id, chat_id, user_name');
 
@@ -136,7 +136,7 @@
             container.innerText = "در حال بارگذاری وضعیت...";
 
             try {
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('activities')
                     .select('*')
                     .eq('user_id', CURRENT_USER_ID)
@@ -174,7 +174,7 @@
             grid.innerHTML = "<p class='text-gray-400 text-sm col-span-full text-center'>در حال بارگذاری دسته‌بندی‌ها...</p>";
             
             try {
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('categories')
                     .select('category')
                     .eq('user_id', CURRENT_USER_ID);
@@ -207,7 +207,7 @@
             
             try {
                 // الف) بستن تسک قبلی کاربر
-                const { data: activeTasks } = await supabase
+                const { data: activeTasks } = await supabaseClient
                     .from('activities')
                     .select('id, start_time')
                     .eq('user_id', CURRENT_USER_ID)
@@ -216,7 +216,7 @@
                 if (activeTasks && activeTasks.length > 0) {
                     for (const task of activeTasks) {
                         const duration = Math.floor((new Date() - new Date(task.start_time)) / 60000);
-                        await supabase
+                        await supabaseClient
                             .from('activities')
                             .update({ end_time: now, duration_minutes: duration })
                             .eq('id', task.id);
@@ -224,7 +224,7 @@
                 }
 
                 // ب) ایجاد رکورد جدید تسک
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('activities')
                     .insert([{ 
                         user_id: CURRENT_USER_ID, 
@@ -247,7 +247,7 @@
             if (!CURRENT_USER_ID) return;
             
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('activities')
                     .delete()
                     .eq('user_id', CURRENT_USER_ID)
