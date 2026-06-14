@@ -42,7 +42,7 @@
 
             <div class="text-center space-y-4">
                 <div>
-                    <h1 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">🎯 Focus Dashboard</h1>
+                    <h1 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">Focus Dashboard</h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Monitor and manage user activities directly</p>
                 </div>
                 
@@ -72,13 +72,13 @@
         </div>
 
         <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-2xl p-6 shadow-sm">
-            <h2 class="text-md font-bold text-gray-700 dark:text-gray-300 mb-4">🚀 Start New Task</h2>
+            <h2 class="text-md font-bold text-gray-700 dark:text-gray-300 mb-4">Start New Task</h2>
             <div id="categories-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 </div>
         </div>
 
         <div class="bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#2d2d2d] rounded-2xl p-6 shadow-sm">
-            <h2 class="text-md font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">📊 Performance Metrics</h2>
+            <h2 class="text-md font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">Performance Metrics</h2>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div class="bg-white dark:bg-[#121212] border border-gray-200 dark:border-[#2d2d2d] rounded-xl p-4 space-y-2">
                     <div class="text-xs font-bold text-indigo-500 uppercase tracking-wider">Today</div>
@@ -184,7 +184,7 @@
                     const startTime = new Date(current.start_time + "Z");
                     const diffMins = Math.floor((new Date() - startTime) / 60000);
                     
-                    container.innerText = `Active: ${current.category} (${diffMins < 0 ? 0 : diffMins}m elapsed)`;
+                    container.innerText = `${current.category}\n${diffMins < 0 ? 0 : diffMins}m`;
                     container.className = "text-base font-bold text-indigo-600 dark:text-indigo-400";
                     actions.classList.remove("hidden");
                 } else {
