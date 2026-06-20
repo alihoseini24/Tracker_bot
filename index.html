@@ -19,19 +19,9 @@
     </script>
     <style>
         body { font-family: 'Vazirmatn', sans-serif; }
-        
-        @keyframes subtlePulse {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 0.2; }
-        }
-        .pulse-slow {
-            animation: subtlePulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
         summary::-webkit-details-marker { display: none; }
         summary { list-style: none; }
 
-        /* Dark Mode: Matte Glassmorphism */
         @media (prefers-color-scheme: dark) {
             .app-card {
                 background: rgba(28, 28, 30, 0.4);
@@ -49,7 +39,6 @@
             }
         }
 
-        /* Light Mode: Flat Minimalist Minimal White */
         @media (prefers-color-scheme: light) {
             .app-card {
                 background: #f4f4f5;
@@ -79,19 +68,26 @@
             <div class="w-2 h-2 rounded-full bg-zinc-400 dark:bg-zinc-600 shadow-sm"></div>
         </div>
         
-        <div class="grid grid-cols-2 gap-3 app-card rounded-2xl p-4 text-center">
-            <div class="space-y-1.5 border-r border-zinc-200 dark:border-white/5 pr-2">
-                <p class="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Workday End</p>
-                <p id="countdown-work" class="text-xl font-normal font-mono text-zinc-700 dark:text-zinc-400">00:00:00</p>
+        <div class="grid grid-cols-3 gap-2 app-card rounded-2xl p-3 text-center">
+            <div class="space-y-1 border-r border-zinc-200 dark:border-white/5 pr-1">
+                <p class="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Workday End</p>
+                <p id="countdown-work" class="text-base font-normal font-mono text-zinc-700 dark:text-zinc-400">00:00</p>
                 <div class="w-full bg-zinc-200 dark:bg-white/5 h-1 rounded-full overflow-hidden">
-                    <div id="progress-work" class="bg-zinc-400 dark:bg-zinc-600 h-1 w-0 transition-all duration-1000 pulse-slow"></div>
+                    <div id="progress-work" class="bg-zinc-400 dark:bg-zinc-600 h-1 w-0 transition-all duration-1000"></div>
                 </div>
             </div>
-            <div class="space-y-1.5 pl-2">
-                <p class="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Day End</p>
-                <p id="countdown-day" class="text-xl font-normal font-mono text-zinc-700 dark:text-zinc-400">00:00:00</p>
+            <div class="space-y-1 border-r border-zinc-200 dark:border-white/5 px-1">
+                <p class="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Golden Hours</p>
+                <p id="countdown-golden" class="text-base font-normal font-mono text-zinc-700 dark:text-zinc-400">00:00</p>
                 <div class="w-full bg-zinc-200 dark:bg-white/5 h-1 rounded-full overflow-hidden">
-                    <div id="progress-day" class="bg-zinc-400 dark:bg-zinc-600 h-1 w-0 transition-all duration-1000 pulse-slow"></div>
+                    <div id="progress-golden" class="bg-zinc-400 dark:bg-zinc-600 h-1 w-0 transition-all duration-1000"></div>
+                </div>
+            </div>
+            <div class="space-y-1 pl-1">
+                <p class="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Day End</p>
+                <p id="countdown-day" class="text-base font-normal font-mono text-zinc-700 dark:text-zinc-400">00:00</p>
+                <div class="w-full bg-zinc-200 dark:bg-white/5 h-1 rounded-full overflow-hidden">
+                    <div id="progress-day" class="bg-zinc-400 dark:bg-zinc-600 h-1 w-0 transition-all duration-1000"></div>
                 </div>
             </div>
         </div>
@@ -196,6 +192,16 @@
         </div>
     </div>
 
+    <script id="worker-code" type="javascript/worker">
+        self.onmessage = function(e) {
+            if (e.data === "start") {
+                setInterval(() => {
+                    self.postMessage("tick");
+                }, 60000);
+            }
+        };
+    </script>
+
     <script>
         const SUPABASE_URL = "https://usvegeoutoudjxbsfdov.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_eyRouLDdaSGBOhxlbGezow_jhYlAPEO";
@@ -204,14 +210,31 @@
 
         let CURRENT_USER_ID = null;
         let CURRENT_CHAT_ID = null;
-        let autoRefreshTimer = null;
-        let countdownTimer = null;
         let loadedHistoryRecords = [];
+        let timerWorker = null;
 
         document.addEventListener("DOMContentLoaded", () => {
             loadUsersDropdown();
-            startCountdowns();
+            initWorker();
+            updateCountdowns();
         });
+
+        function initWorker() {
+            try {
+                const blob = new Blob([document.getElementById('worker-code').textContent], {type: "text/javascript"});
+                timerWorker = new Worker(URL.createObjectURL(blob));
+                timerWorker.onmessage = function(e) {
+                    if (e.data === "tick") {
+                        updateCountdowns();
+                        updateActiveSessionMinutesOnly();
+                    }
+                };
+                timerWorker.postMessage("start");
+            } catch (err) {
+                console.error("Worker initialization failed", err);
+                setInterval(() => { updateCountdowns(); updateActiveSessionMinutesOnly(); }, 60000);
+            }
+        }
 
         function openCategoriesModal() {
             if(!CURRENT_USER_ID) return;
@@ -269,8 +292,10 @@
             CURRENT_USER_ID = parseInt(selector.value);
             CURRENT_CHAT_ID = parseInt(selectedOption.dataset.chatId);
 
-            refreshDashboardData();
+            fetchDashboardDataFromNetwork();
         }
+
+        let activeSessionCachedStart = null;
 
         async function loadActiveSession() {
             if (!CURRENT_USER_ID) return;
@@ -291,14 +316,15 @@
 
                 if (data && data.length > 0) {
                     const current = data[0];
-                    const startTime = new Date(current.start_time + "Z");
-                    const diffMins = Math.floor((new Date() - startTime) / 60000);
+                    activeSessionCachedStart = new Date(current.start_time + "Z");
+                    const diffMins = Math.floor((new Date() - activeSessionCachedStart) / 60000);
                     
                     container.innerText = current.category;
                     container.className = "text-xl font-bold tracking-tight text-zinc-800 dark:text-zinc-400";
                     timeContainer.innerText = `${diffMins < 0 ? 0 : diffMins}m elapsed`;
                     cancelBtn.classList.remove("hidden");
                 } else {
+                    activeSessionCachedStart = null;
                     container.innerText = "Idle";
                     container.className = "text-xl font-bold tracking-tight text-zinc-400 dark:text-zinc-600";
                     timeContainer.innerText = "";
@@ -307,6 +333,13 @@
             } catch (err) {
                 console.error(err);
             }
+        }
+
+        function updateActiveSessionMinutesOnly() {
+            if (!activeSessionCachedStart) return;
+            const timeContainer = document.getElementById("active-task-time");
+            const diffMins = Math.floor((new Date() - activeSessionCachedStart) / 60000);
+            timeContainer.innerText = `${diffMins < 0 ? 0 : diffMins}m elapsed`;
         }
 
         async function loadCategories() {
@@ -414,7 +447,7 @@
                     .from('activities')
                     .insert([{ user_id: CURRENT_USER_ID, chat_id: CURRENT_CHAT_ID, category: category, start_time: now }]);
 
-                refreshDashboardData();
+                fetchDashboardDataFromNetwork();
             } catch (err) {
                 console.error(err);
             }
@@ -429,7 +462,7 @@
                     .eq('user_id', CURRENT_USER_ID)
                     .is('end_time', null);
 
-                refreshDashboardData();
+                loadActiveSession();
             } catch (err) {
                 console.error(err);
             }
@@ -526,7 +559,7 @@
 
                 if (error) throw error;
                 closeHistoryModal();
-                refreshDashboardData();
+                fetchDashboardDataFromNetwork();
             } catch(err) {
                 console.error(err);
             }
@@ -545,7 +578,7 @@
 
                 if (error) throw error;
                 closeHistoryModal();
-                refreshDashboardData();
+                fetchDashboardDataFromNetwork();
             } catch(err) {
                 console.error(err);
             }
@@ -554,84 +587,81 @@
         function updateCountdowns() {
             const now = new Date();
             
+            // ۱. تـایـمـر انـتـهـای روز کـاری (17:00) - آپدیت جدید برای نمایش Passed
             const workStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0);
             const workEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0, 0);
             let workDiff = workEnd - now;
-            if (workDiff < 0) workDiff = 0;
-            
-            const totalWorkMs = workEnd - workStart;
-            const currentWorkElapsed = now - workStart;
-            let workPct = (currentWorkElapsed / totalWorkMs) * 100;
-            if (workPct < 0) workPct = 0;
-            if (workPct > 100 || workDiff === 0) workPct = 100;
+            let workPct = 0;
+
+            if (workDiff <= 0) {
+                document.getElementById("countdown-work").innerText = "Passed";
+                workPct = 100;
+            } else {
+                const totalWorkMs = workEnd - workStart;
+                workPct = ((now - workStart) / totalWorkMs) * 100;
+                if (workPct < 0) workPct = 0;
+                if (workPct > 100) workPct = 100;
+                
+                const wTotalMins = Math.floor(workDiff / 60000);
+                const wHrs = String(Math.floor(wTotalMins / 60)).padStart(2, '0');
+                const wMins = String(wTotalMins % 60).padStart(2, '0');
+                document.getElementById("countdown-work").innerText = `${wHrs}:${wMins}`;
+            }
             document.getElementById("progress-work").style.width = `${workPct}%`;
 
+            // ۲. تـایـمـر سـاعـت طلایی صـبـح (تا قبل از 13:00)
+            const goldenStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0);
+            const goldenEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 13, 0, 0);
+            let goldenDiff = goldenEnd - now;
+            let goldenPct = 0;
+            
+            if (goldenDiff <= 0) {
+                document.getElementById("countdown-golden").innerText = "Passed";
+                goldenPct = 100;
+            } else {
+                const totalGoldenMs = goldenEnd - goldenStart;
+                goldenPct = ((now - goldenStart) / totalGoldenMs) * 100;
+                if (goldenPct < 0) goldenPct = 0;
+                if (goldenPct > 100) goldenPct = 100;
+                
+                const gTotalMins = Math.floor(goldenDiff / 60000);
+                const gHrs = String(Math.floor(gTotalMins / 60)).padStart(2, '0');
+                const gMins = String(gTotalMins % 60).padStart(2, '0');
+                document.getElementById("countdown-golden").innerText = `${gHrs}:${gMins}`;
+            }
+            document.getElementById("progress-golden").style.width = `${goldenPct}%`;
+
+            // ۳. تـایـمـر انـتـهـای روز (00:00)
             const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
             const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
             let dayDiff = dayEnd - now;
             
             const totalDayMs = 24 * 60 * 60 * 1000;
-            const currentDayElapsed = now - dayStart;
-            const dayPct = (currentDayElapsed / totalDayMs) * 100;
+            const dayPct = ((now - dayStart) / totalDayMs) * 100;
             document.getElementById("progress-day").style.width = `${dayPct}%`;
 
-            const formatTime = (ms) => {
-                const totalSecs = Math.floor(ms / 1000);
-                const hrs = String(Math.floor(totalSecs / 3600)).padStart(2, '0');
-                const mins = String(Math.floor((totalSecs % 3600) / 60)).padStart(2, '0');
-                const secs = String(totalSecs % 60).padStart(2, '0');
-                return `${hrs}:${mins}:${secs}`;
+            const formatTimeShort = (ms) => {
+                const totalMins = Math.floor(ms / 60000);
+                const hrs = String(Math.floor(totalMins / 60)).padStart(2, '0');
+                const mins = String(totalMins % 60).padStart(2, '0');
+                return `${hrs}:${mins}`;
             }
 
-            document.getElementById("countdown-work").innerText = formatTime(workDiff);
-            document.getElementById("countdown-day").innerText = formatTime(dayDiff);
+            document.getElementById("countdown-day").innerText = formatTimeShort(dayDiff);
         }
 
-        function startCountdowns() {
-            if (countdownTimer) return;
-            updateCountdowns();
-            countdownTimer = setInterval(updateCountdowns, 1000);
-        }
-
-        function stopCountdowns() {
-            if (countdownTimer) {
-                clearInterval(countdownTimer);
-                countdownTimer = null;
-            }
-        }
-
-        function refreshDashboardData() {
+        function fetchDashboardDataFromNetwork() {
             loadActiveSession();
             loadCategories();
             loadStatsReports();
         }
 
-        function startSmartRefresh() {
-            if (autoRefreshTimer) return;
-            autoRefreshTimer = setInterval(() => {
-                if (document.visibilityState === 'visible') refreshDashboardData();
-            }, 60000);
-        }
-
-        function stopSmartRefresh() {
-            if (autoRefreshTimer) {
-                clearInterval(autoRefreshTimer);
-                autoRefreshTimer = null;
-            }
-        }
-
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                refreshDashboardData();
-                startSmartRefresh();
-                startCountdowns();
-            } else {
-                stopSmartRefresh();
-                stopCountdowns();
+                updateCountdowns();
+                updateActiveSessionMinutesOnly();
             }
         });
-
-        startSmartRefresh();
     </script>
 </body>
 </html>
