@@ -651,16 +651,31 @@
         }
 
         function fetchDashboardDataFromNetwork() {
+            if (!CURRENT_USER_ID) return;
             loadActiveSession();
             loadCategories();
             loadStatsReports();
         }
 
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                updateCountdowns();
-                updateActiveSessionMinutesOnly();
-            }
+        // Trigger immediate updates when the window becomes active or focused
+function handleWindowActivation() {
+    if (document.visibilityState === 'visible') {
+        // 1. Recalculate UI countdown clocks instantly
+        updateCountdowns();
+        updateActiveSessionMinutesOnly();
+        
+        // 2. Pull fresh data from the network immediately
+        if (CURRENT_USER_ID) {
+            fetchDashboardDataFromNetwork();
+        }
+    }
+}
+
+// Listen for tab switching / minimizing
+document.addEventListener('visibilitychange', handleWindowActivation);
+
+// Listen for window focusing (clicking into the app from another tool)
+window.addEventListener('focus', handleWindowActivation);
         });
     </script>
 </body>
