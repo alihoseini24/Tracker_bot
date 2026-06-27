@@ -674,4 +674,618 @@
         window.addEventListener('focus', handleWindowActivation);
     </script>
 </body>
+</html>            <div class="flex items-center gap-2">
+                <select id="user-selector" onchange="handleUserChange()" class="app-input rounded-xl px-3 py-1.5 text-sm font-medium focus:outline-none w-44">
+                    <option value="">Loading...</option>
+                </select>
+            </div>
+            <div class="w-2 h-2 rounded-full bg-zinc-400 dark:bg-zinc-600 shadow-sm"></div>
+        </div>
+        
+        <div class="grid grid-cols-3 gap-2 app-card rounded-2xl p-3 text-center">
+            <div class="space-y-1 border-r border-zinc-200 dark:border-white/5 pr-1">
+                <p class="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Workday End</p>
+                <p id="countdown-work" class="text-base font-normal font-mono text-zinc-700 dark:text-zinc-400">00:00</p>
+                <div class="w-full bg-zinc-200 dark:bg-white/5 h-1 rounded-full overflow-hidden">
+                    <div id="progress-work" class="bg-zinc-400 dark:bg-zinc-600 h-1 w-0 transition-all duration-1000"></div>
+                </div>
+            </div>
+            <div class="space-y-1 border-r border-zinc-200 dark:border-white/5 px-1">
+                <p class="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Golden Hours</p>
+                <p id="countdown-golden" class="text-base font-normal font-mono text-zinc-700 dark:text-zinc-400">00:00</p>
+                <div class="w-full bg-zinc-200 dark:bg-white/5 h-1 rounded-full overflow-hidden">
+                    <div id="progress-golden" class="bg-zinc-400 dark:bg-zinc-600 h-1 w-0 transition-all duration-1000"></div>
+                </div>
+            </div>
+            <div class="space-y-1 pl-1">
+                <p class="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Day End</p>
+                <p id="countdown-day" class="text-base font-normal font-mono text-zinc-700 dark:text-zinc-400">00:00</p>
+                <div class="w-full bg-zinc-200 dark:bg-white/5 h-1 rounded-full overflow-hidden">
+                    <div id="progress-day" class="bg-zinc-400 dark:bg-zinc-600 h-1 w-0 transition-all duration-1000"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="app-card rounded-2xl p-5 text-center space-y-4">
+            <div class="space-y-1">
+                <p class="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Current Session</p>
+                <h2 id="active-task-status" class="text-xl font-bold tracking-tight text-zinc-700 dark:text-zinc-400">Select User</h2>
+                <p id="active-task-time" class="text-xs text-zinc-400 dark:text-zinc-500 font-medium h-4"></p>
+            </div>
+
+            <div class="flex justify-center items-center gap-2 pt-2 border-t border-zinc-200 dark:border-white/5">
+                <button onclick="openCategoriesModal()" class="flex-1 bg-zinc-100 text-zinc-700 border border-zinc-300 dark:bg-white/5 dark:border-white/5 dark:text-zinc-400 py-2 rounded-xl text-xs font-medium tracking-wide hover:bg-zinc-200 dark:hover:bg-white/10 transition">
+                    Start Task
+                </button>
+                <button id="btn-cancel" onclick="cancelActiveTask()" class="flex-1 hidden bg-zinc-100 text-zinc-500 border border-zinc-300 dark:bg-zinc-900/40 dark:border-white/5 dark:text-zinc-500 py-2 rounded-xl text-xs font-medium tracking-wide hover:bg-zinc-200 dark:hover:bg-zinc-900/60 transition">
+                    Cancel Task
+                </button>
+            </div>
+        </div>
+
+        <div class="space-y-2">
+            <details class="app-card rounded-2xl p-4 group" open>
+                <summary class="flex justify-between items-center cursor-pointer select-none">
+                    <span class="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Today</span>
+                    <svg class="w-3 h-3 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div id="report-day" class="text-[11px] text-zinc-600 dark:text-zinc-400 space-y-1 text-left font-medium mt-3"></div>
+            </details>
+
+            <details class="app-card rounded-2xl p-4 group">
+                <summary class="flex justify-between items-center cursor-pointer select-none">
+                    <span class="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Last 7 Days</span>
+                    <svg class="w-3 h-3 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div id="report-week" class="text-[11px] text-zinc-600 dark:text-zinc-400 space-y-1 text-left font-medium mt-3"></div>
+            </details>
+
+            <details class="app-card rounded-2xl p-4 group">
+                <summary class="flex justify-between items-center cursor-pointer select-none">
+                    <span class="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Last 30 Days</span>
+                    <svg class="w-3 h-3 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div id="report-month" class="text-[11px] text-zinc-600 dark:text-zinc-400 space-y-1 text-left font-medium mt-3"></div>
+            </details>
+        </div>
+    </div>
+
+    <div class="max-w-md w-full mx-auto text-center pt-8 pb-2">
+        <button onclick="openHistoryModal()" class="text-[10px] text-zinc-300 dark:text-zinc-900 hover:text-zinc-400 dark:hover:text-zinc-700 transition tracking-wider uppercase font-medium focus:outline-none">
+            Edit History
+        </button>
+    </div>
+
+    <div id="categories-modal" class="fixed inset-0 bg-black/40 dark:bg-black/70 backdrop-blur-md z-50 flex items-end justify-center hidden" onclick="closeCategoriesModal()">
+        <div class="bg-white dark:bg-[#1c1c1e] border-t border-zinc-200 dark:border-white/10 w-full max-w-md rounded-t-3xl p-5 space-y-4 shadow-2xl transition-transform" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center border-b border-zinc-100 dark:border-white/5 pb-2">
+                <h3 class="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Select Target Task</h3>
+                <button onclick="closeCategoriesModal()" class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 font-medium">Dismiss</button>
+            </div>
+            <div id="categories-grid" class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1"></div>
+        </div>
+    </div>
+
+    <div id="history-modal" class="fixed inset-0 bg-black/40 dark:bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden" onclick="closeHistoryModal()">
+        <div class="bg-white dark:bg-[#1c1c1e] border border-zinc-200 dark:border-white/10 w-full max-w-sm rounded-2xl p-4 space-y-4 shadow-2xl" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center border-b border-zinc-100 dark:border-white/5 pb-2">
+                <h3 class="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Modify Activity History</h3>
+                <button onclick="closeHistoryModal()" class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">Close</button>
+            </div>
+            
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-bold mb-1">Select Session Record</label>
+                    <select id="history-item-selector" onchange="populateHistoryFields()" class="w-full app-input rounded-xl p-2 focus:outline-none"></select>
+                </div>
+                
+                <div class="grid grid-cols-1 gap-2">
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-bold mb-1">Category Label</label>
+                        <input type="text" id="edit-history-category" class="w-full app-input rounded-xl p-2 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-bold mb-1">Start Timestamp</label>
+                        <input type="datetime-local" id="edit-history-start" class="w-full app-input rounded-xl p-2 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-bold mb-1">End Timestamp</label>
+                        <input type="datetime-local" id="edit-history-end" class="w-full app-input rounded-xl p-2 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="pt-2 flex gap-2">
+                    <button onclick="submitHistoryUpdate()" class="flex-1 bg-zinc-100 text-zinc-700 border border-zinc-300 dark:bg-white/5 dark:border-white/5 dark:text-zinc-400 py-2 rounded-xl font-medium text-center hover:bg-zinc-200 dark:hover:bg-white/10 transition">
+                        Apply Changes
+                    </button>
+                    <button onclick="deleteHistoryItem()" class="px-3 bg-zinc-50 text-zinc-400 border border-zinc-200 dark:bg-zinc-900/40 dark:border-white/5 dark:text-zinc-600 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900/60 transition">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script id="worker-code" type="javascript/worker">
+        self.onmessage = function(e) {
+            if (e.data === "start") {
+                setInterval(() => {
+                    self.postMessage("tick");
+                }, 60000);
+            }
+        };
+    </script>
+
+    <script>
+        const SUPABASE_URL = "https://usvegeoutoudjxbsfdov.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_eyRouLDdaSGBOhxlbGezow_jhYlAPEO";
+
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let CURRENT_USER_ID = null;
+        let CURRENT_CHAT_ID = null;
+        let loadedHistoryRecords = [];
+        let timerWorker = null;
+        let activeSessionCachedStart = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            loadUsersDropdown();
+            initWorker();
+            updateCountdowns();
+        });
+
+        function initWorker() {
+            try {
+                const blob = new Blob([document.getElementById('worker-code').textContent], {type: "text/javascript"});
+                timerWorker = new Worker(URL.createObjectURL(blob));
+                timerWorker.onmessage = function(e) {
+                    if (e.data === "tick") {
+                        updateCountdowns();
+                        updateActiveSessionMinutesOnly();
+                    }
+                };
+                timerWorker.postMessage("start");
+            } catch (err) {
+                console.error("Worker initialization failed", err);
+                setInterval(() => { updateCountdowns(); updateActiveSessionMinutesOnly(); }, 60000);
+            }
+        }
+
+        function openCategoriesModal() {
+            if(!CURRENT_USER_ID) return;
+            document.getElementById("categories-modal").classList.remove("hidden");
+        }
+
+        function closeCategoriesModal() {
+            document.getElementById("categories-modal").classList.add("hidden");
+        }
+
+        function openHistoryModal() {
+            if(!CURRENT_USER_ID) return;
+            document.getElementById("history-modal").classList.remove("hidden");
+            fetchRecentHistory();
+        }
+
+        function closeHistoryModal() {
+            document.getElementById("history-modal").classList.add("hidden");
+        }
+
+        async function loadUsersDropdown() {
+            const selector = document.getElementById("user-selector");
+            try {
+                const { data: users, error } = await supabaseClient
+                    .from('users')
+                    .select('user_id, chat_id, user_name');
+
+                if (error) throw error;
+                selector.innerHTML = "";
+
+                if (users && users.length > 0) {
+                    users.forEach(u => {
+                        const opt = document.createElement("option");
+                        opt.value = u.user_id;
+                        opt.dataset.chatId = u.chat_id || u.user_id;
+                        opt.innerText = u.user_name || 'Anonymous';
+                        selector.appendChild(opt);
+                    });
+                    selector.selectedIndex = 0;
+                    handleUserChange();
+                } else {
+                    selector.innerHTML = "<option value=''>No Users Found</option>";
+                }
+            } catch (err) {
+                console.error("Supabase connection error:", err);
+                selector.innerHTML = "<option value=''>Connection Error</option>";
+            }
+        }
+
+        function handleUserChange() {
+            const selector = document.getElementById("user-selector");
+            if (!selector.value) return;
+
+            const selectedOption = selector.options[selector.selectedIndex];
+            CURRENT_USER_ID = parseInt(selector.value);
+            CURRENT_CHAT_ID = parseInt(selectedOption.dataset.chatId);
+
+            fetchDashboardDataFromNetwork();
+        }
+
+        async function loadActiveSession() {
+            if (!CURRENT_USER_ID) return;
+            const container = document.getElementById("active-task-status");
+            const timeContainer = document.getElementById("active-task-time");
+            const cancelBtn = document.getElementById("btn-cancel");
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('activities')
+                    .select('*')
+                    .eq('user_id', CURRENT_USER_ID)
+                    .is('end_time', null)
+                    .order('id', { ascending: false })
+                    .limit(1);
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    const current = data[0];
+                    activeSessionCachedStart = new Date(current.start_time + "Z");
+                    const diffMins = Math.floor((new Date() - activeSessionCachedStart) / 60000);
+                    
+                    container.innerText = current.category;
+                    container.className = "text-xl font-bold tracking-tight text-zinc-800 dark:text-zinc-400";
+                    timeContainer.innerText = `${diffMins < 0 ? 0 : diffMins}m elapsed`;
+                    cancelBtn.classList.remove("hidden");
+                } else {
+                    activeSessionCachedStart = null;
+                    container.innerText = "Idle";
+                    container.className = "text-xl font-bold tracking-tight text-zinc-400 dark:text-zinc-600";
+                    timeContainer.innerText = "";
+                    cancelBtn.classList.add("hidden");
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function updateActiveSessionMinutesOnly() {
+            if (!activeSessionCachedStart) return;
+            const timeContainer = document.getElementById("active-task-time");
+            const diffMins = Math.floor((new Date() - activeSessionCachedStart) / 60000);
+            timeContainer.innerText = `${diffMins < 0 ? 0 : diffMins}m elapsed`;
+        }
+
+        async function loadCategories() {
+            if (!CURRENT_USER_ID) return;
+            const grid = document.getElementById("categories-grid");
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('categories')
+                    .select('category')
+                    .eq('user_id', CURRENT_USER_ID);
+
+                if (error) throw error;
+                grid.innerHTML = "";
+                
+                const defaultCats = ["😈SpicyTime", "❤️Call/Chat", "📚Study&lock", "☕Break/Snack", "🍽️Meal/Cook", "💤Sleep", "📝Plan and prepare", "🛁washing up / Shower", "🚌Commute", "💪Exercises", "🛒Grocery", "🍿Movie/Series"];
+                const cats = (data && data.length > 0) ? data.map(r => r.category) : defaultCats;
+
+                cats.forEach(cat => {
+                    const btn = document.createElement("button");
+                    btn.className = "bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-400 p-2.5 rounded-xl text-xs font-medium transition text-center truncate";
+                    btn.innerText = cat;
+                    btn.onclick = () => {
+                        startNewTask(cat);
+                        closeCategoriesModal();
+                    };
+                    grid.appendChild(btn);
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function loadStatsReports() {
+            if (!CURRENT_USER_ID) return;
+
+            const dayDiv = document.getElementById("report-day");
+            const weekDiv = document.getElementById("report-week");
+            const monthDiv = document.getElementById("report-month");
+
+            const now = new Date();
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+            const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+            const startOfMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+            try {
+                const { data: activities, error } = await supabaseClient
+                    .from('activities')
+                    .select('category, start_time, duration_minutes')
+                    .eq('user_id', CURRENT_USER_ID)
+                    .not('duration_minutes', 'is', null)
+                    .gte('start_time', startOfMonth);
+
+                if (error) throw error;
+
+                const processReport = (filteredActs) => {
+                    const summary = {};
+                    filteredActs.forEach(act => {
+                        summary[act.category] = (summary[act.category] || 0) + act.duration_minutes;
+                    });
+                    
+                    const keys = Object.keys(summary);
+                    if (keys.length === 0) return "<span class='text-zinc-400 dark:text-zinc-600 text-[10px]'>Empty</span>";
+                    
+                    return keys.map(cat => {
+                        const h = Math.floor(summary[cat] / 60);
+                        const m = summary[cat] % 60;
+                        return `<div class="flex justify-between border-b border-zinc-200 dark:border-white/5 py-0.5 max-w-xs"><span class="truncate pr-1">• ${cat}</span><span class="font-bold shrink-0 text-zinc-500 dark:text-zinc-500">${h > 0 ? h+'h '+m+'m' : m+'m'}</span></div>`;
+                    }).join('');
+                };
+
+                dayDiv.innerHTML = processReport(activities.filter(a => a.start_time >= startOfDay));
+                weekDiv.innerHTML = processReport(activities.filter(a => a.start_time >= startOfWeek));
+                monthDiv.innerHTML = processReport(activities);
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function startNewTask(category) {
+            if (!CURRENT_USER_ID) return;
+            const now = new Date().toISOString();
+            
+            try {
+                const { data: activeTasks } = await supabaseClient
+                    .from('activities')
+                    .select('id, start_time')
+                    .eq('user_id', CURRENT_USER_ID)
+                    .is('end_time', null);
+
+                if (activeTasks && activeTasks.length > 0) {
+                    for (const task of activeTasks) {
+                        const startTimeUTC = new Date(task.start_time + "Z");
+                        const duration = Math.floor((new Date() - startTimeUTC) / 60000);
+                        
+                        await supabaseClient
+                            .from('activities')
+                            .update({ end_time: now, duration_minutes: duration < 0 ? 0 : duration })
+                            .eq('id', task.id);
+                    }
+                }
+
+                await supabaseClient
+                    .from('activities')
+                    .insert([{ user_id: CURRENT_USER_ID, chat_id: CURRENT_CHAT_ID, category: category, start_time: now }]);
+
+                fetchDashboardDataFromNetwork();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function cancelActiveTask() {
+            if (!CURRENT_USER_ID) return;
+            try {
+                await supabaseClient
+                    .from('activities')
+                    .delete()
+                    .eq('user_id', CURRENT_USER_ID)
+                    .is('end_time', null);
+
+                loadActiveSession();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function fetchRecentHistory() {
+            const selector = document.getElementById("history-item-selector");
+            selector.innerHTML = "<option>Loading records...</option>";
+            try {
+                const { data, error } = await supabaseClient
+                    .from('activities')
+                    .select('*')
+                    .eq('user_id', CURRENT_USER_ID)
+                    .order('start_time', { ascending: false })
+                    .limit(15);
+
+                if (error) throw error;
+                loadedHistoryRecords = data || [];
+                selector.innerHTML = "";
+
+                if (loadedHistoryRecords.length === 0) {
+                    selector.innerHTML = "<option>No items found</option>";
+                    return;
+                }
+
+                loadedHistoryRecords.forEach((item, index) => {
+                    const opt = document.createElement("option");
+                    opt.value = index;
+                    const dateObj = new Date(item.start_time + "Z");
+                    const dateStr = dateObj.toLocaleDateString([], {month:'short', day:'numeric'});
+                    const timeStr = dateObj.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false});
+                    opt.innerText = `${dateStr} ${timeStr} - ${item.category}`;
+                    selector.appendChild(opt);
+                });
+
+                populateHistoryFields();
+            } catch(err) {
+                console.error(err);
+                selector.innerHTML = "<option>Error loading logs</option>";
+            }
+        }
+
+        function toLocalISOString(date) {
+            const tzoffset = date.getTimezoneOffset() * 60000;
+            return (new Date(date.getTime() - tzoffset)).toISOString().slice(0, 16);
+        }
+
+        function populateHistoryFields() {
+            const index = document.getElementById("history-item-selector").value;
+            const record = loadedHistoryRecords[index];
+            if (!record) return;
+
+            document.getElementById("edit-history-category").value = record.category || "";
+            
+            if (record.start_time) {
+                document.getElementById("edit-history-start").value = toLocalISOString(new Date(record.start_time + "Z"));
+            } else {
+                document.getElementById("edit-history-start").value = "";
+            }
+
+            if (record.end_time) {
+                document.getElementById("edit-history-end").value = toLocalISOString(new Date(record.end_time + "Z"));
+            } else {
+                document.getElementById("edit-history-end").value = "";
+            }
+        }
+
+        async function submitHistoryUpdate() {
+            const index = document.getElementById("history-item-selector").value;
+            const record = loadedHistoryRecords[index];
+            if (!record) return;
+
+            const category = document.getElementById("edit-history-category").value;
+            const startVal = document.getElementById("edit-history-start").value;
+            const endVal = document.getElementById("edit-history-end").value;
+
+            if (!category || !startVal) return;
+
+            const start_time = new Date(startVal).toISOString();
+            let end_time = null;
+            let duration_minutes = null;
+
+            if (endVal) {
+                end_time = new Date(endVal).toISOString();
+                duration_minutes = Math.floor((new Date(endVal) - new Date(startVal)) / 60000);
+                if (duration_minutes < 0) duration_minutes = 0;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('activities')
+                    .update({ category, start_time, end_time, duration_minutes })
+                    .eq('id', record.id);
+
+                if (error) throw error;
+                closeHistoryModal();
+                fetchDashboardDataFromNetwork();
+            } catch(err) {
+                console.error(err);
+            }
+        }
+
+        async function deleteHistoryItem() {
+            const index = document.getElementById("history-item-selector").value;
+            const record = loadedHistoryRecords[index];
+            if (!record || !confirm("Delete this record permanently?")) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('activities')
+                    .delete()
+                    .eq('id', record.id);
+
+                if (error) throw error;
+                closeHistoryModal();
+                fetchDashboardDataFromNetwork();
+            } catch(err) {
+                console.error(err);
+            }
+        }
+
+        function updateCountdowns() {
+            const now = new Date();
+            
+            // ۱. تـایـمـر انـتـهـای روز کـاری (17:00)
+            const workStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0);
+            const workEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0, 0);
+            let workDiff = workEnd - now;
+            let workPct = 0;
+
+            if (workDiff <= 0) {
+                document.getElementById("countdown-work").innerText = "Passed";
+                workPct = 100;
+            } else {
+                const totalWorkMs = workEnd - workStart;
+                workPct = ((now - workStart) / totalWorkMs) * 100;
+                if (workPct < 0) workPct = 0;
+                if (workPct > 100) workPct = 100;
+                
+                const wTotalMins = Math.floor(workDiff / 60000);
+                const wHrs = String(Math.floor(wTotalMins / 60)).padStart(2, '0');
+                const wMins = String(wTotalMins % 60).padStart(2, '0');
+                document.getElementById("countdown-work").innerText = `${wHrs}:${wMins}`;
+            }
+            document.getElementById("progress-work").style.width = `${workPct}%`;
+
+            // ۲. تـایـمـر سـاعـت طلایی صـبـح (تا قبل از 13:00)
+            const goldenStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0);
+            const goldenEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 13, 0, 0);
+            let goldenDiff = goldenEnd - now;
+            let goldenPct = 0;
+            
+            if (goldenDiff <= 0) {
+                document.getElementById("countdown-golden").innerText = "Passed";
+                goldenPct = 100;
+            } else {
+                const totalGoldenMs = goldenEnd - goldenStart;
+                goldenPct = ((now - goldenStart) / totalGoldenMs) * 100;
+                if (goldenPct < 0) goldenPct = 0;
+                if (goldenPct > 100) goldenPct = 100;
+                
+                const gTotalMins = Math.floor(goldenDiff / 60000);
+                const gHrs = String(Math.floor(gTotalMins / 60)).padStart(2, '0');
+                const gMins = String(gTotalMins % 60).padStart(2, '0');
+                document.getElementById("countdown-golden").innerText = `${gHrs}:${gMins}`;
+            }
+            document.getElementById("progress-golden").style.width = `${goldenPct}%`;
+
+            // ۳. تـایـمـر انـتـهـای روز (00:00 بامداد بعدی)
+            const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+            const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+            let dayDiff = dayEnd - now;
+            let dayPct = 0;
+
+            if (dayDiff <= 0) {
+                document.getElementById("countdown-day").innerText = "Passed";
+                dayPct = 100;
+            } else {
+                const totalDayMs = 24 * 60 * 60 * 1000;
+                dayPct = ((now - dayStart) / totalDayMs) * 100;
+                if (dayPct < 0) dayPct = 0;
+                if (dayPct > 100) dayPct = 100;
+
+                const dTotalMins = Math.floor(dayDiff / 60000);
+                const dHrs = String(Math.floor(dTotalMins / 60)).padStart(2, '0');
+                const dMins = String(dTotalMins % 60).padStart(2, '0');
+                document.getElementById("countdown-day").innerText = `${dHrs}:${dMins}`;
+            }
+            document.getElementById("progress-day").style.width = `${dayPct}%`;
+        }
+
+        function fetchDashboardDataFromNetwork() {
+            if (!CURRENT_USER_ID) return;
+            loadActiveSession();
+            loadCategories();
+            loadStatsReports();
+        }
+
+        function handleWindowActivation() {
+            if (document.visibilityState === 'visible') {
+                updateCountdowns();
+                updateActiveSessionMinutesOnly();
+                if (CURRENT_USER_ID) {
+                    fetchDashboardDataFromNetwork();
+                }
+            }
+        }
+
+        document.addEventListener('visibilitychange', handleWindowActivation);
+        window.addEventListener('focus', handleWindowActivation);
+    </script>
+</body>
 </html>
