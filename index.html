@@ -212,6 +212,7 @@
         let CURRENT_CHAT_ID = null;
         let loadedHistoryRecords = [];
         let timerWorker = null;
+        let activeSessionCachedStart = null;
 
         document.addEventListener("DOMContentLoaded", () => {
             loadUsersDropdown();
@@ -276,11 +277,11 @@
                     selector.selectedIndex = 0;
                     handleUserChange();
                 } else {
-                    selector.innerHTML = "<option value=''>No Users</option>";
+                    selector.innerHTML = "<option value=''>No Users Found</option>";
                 }
             } catch (err) {
-                console.error(err);
-                selector.innerHTML = "<option value=''>Error</option>";
+                console.error("Supabase connection error:", err);
+                selector.innerHTML = "<option value=''>Connection Error</option>";
             }
         }
 
@@ -294,8 +295,6 @@
 
             fetchDashboardDataFromNetwork();
         }
-
-        let activeSessionCachedStart = null;
 
         async function loadActiveSession() {
             if (!CURRENT_USER_ID) return;
@@ -587,7 +586,7 @@
         function updateCountdowns() {
             const now = new Date();
             
-            // ۱. تـایـمـر انـتـهـای روز کـاری (17:00) - آپدیت جدید برای نمایش Passed
+            // ۱. تـایـمـر انـتـهـای روز کـاری (17:00)
             const workStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0);
             const workEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0, 0);
             let workDiff = workEnd - now;
@@ -631,23 +630,27 @@
             }
             document.getElementById("progress-golden").style.width = `${goldenPct}%`;
 
-            // ۳. تـایـمـر انـتـهـای روز (00:00)
+            // ۳. تـایـمـر انـتـهـای روز (00:00 بامداد بعدی)
             const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
             const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
             let dayDiff = dayEnd - now;
-            
-            const totalDayMs = 24 * 60 * 60 * 1000;
-            const dayPct = ((now - dayStart) / totalDayMs) * 100;
-            document.getElementById("progress-day").style.width = `${dayPct}%`;
+            let dayPct = 0;
 
-            const formatTimeShort = (ms) => {
-                const totalMins = Math.floor(ms / 60000);
-                const hrs = String(Math.floor(totalMins / 60)).padStart(2, '0');
-                const mins = String(totalMins % 60).padStart(2, '0');
-                return `${hrs}:${mins}`;
+            if (dayDiff <= 0) {
+                document.getElementById("countdown-day").innerText = "Passed";
+                dayPct = 100;
+            } else {
+                const totalDayMs = 24 * 60 * 60 * 1000;
+                dayPct = ((now - dayStart) / totalDayMs) * 100;
+                if (dayPct < 0) dayPct = 0;
+                if (dayPct > 100) dayPct = 100;
+
+                const dTotalMins = Math.floor(dayDiff / 60000);
+                const dHrs = String(Math.floor(dTotalMins / 60)).padStart(2, '0');
+                const dMins = String(dTotalMins % 60).padStart(2, '0');
+                document.getElementById("countdown-day").innerText = `${dHrs}:${dMins}`;
             }
-
-            document.getElementById("countdown-day").innerText = formatTimeShort(dayDiff);
+            document.getElementById("progress-day").style.width = `${dayPct}%`;
         }
 
         function fetchDashboardDataFromNetwork() {
@@ -657,26 +660,18 @@
             loadStatsReports();
         }
 
-        // Trigger immediate updates when the window becomes active or focused
-function handleWindowActivation() {
-    if (document.visibilityState === 'visible') {
-        // 1. Recalculate UI countdown clocks instantly
-        updateCountdowns();
-        updateActiveSessionMinutesOnly();
-        
-        // 2. Pull fresh data from the network immediately
-        if (CURRENT_USER_ID) {
-            fetchDashboardDataFromNetwork();
+        function handleWindowActivation() {
+            if (document.visibilityState === 'visible') {
+                updateCountdowns();
+                updateActiveSessionMinutesOnly();
+                if (CURRENT_USER_ID) {
+                    fetchDashboardDataFromNetwork();
+                }
+            }
         }
-    }
-}
 
-// Listen for tab switching / minimizing
-document.addEventListener('visibilitychange', handleWindowActivation);
-
-// Listen for window focusing (clicking into the app from another tool)
-window.addEventListener('focus', handleWindowActivation);
-        });
+        document.addEventListener('visibilitychange', handleWindowActivation);
+        window.addEventListener('focus', handleWindowActivation);
     </script>
 </body>
 </html>
